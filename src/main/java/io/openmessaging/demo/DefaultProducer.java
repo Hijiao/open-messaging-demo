@@ -11,7 +11,8 @@ import io.openmessaging.Promise;
 
 public class DefaultProducer  implements Producer {
     private MessageFactory messageFactory = new DefaultMessageFactory();
-    private MessageStore messageStore = MessageStore.getInstance();
+    //    private MessageStore messageStore =MessageStore.getInstance();
+    private MessageFileStore messageStore = MessageFileStore.getInstance();
 
     private KeyValue properties;
 
@@ -47,8 +48,14 @@ public class DefaultProducer  implements Producer {
         if ((topic == null && queue == null) || (topic != null && queue != null)) {
             throw new ClientOMSException(String.format("Queue:%s Topic:%s should put one and only one", true, queue));
         }
+        if (topic != null) {
+            messageStore.putMessage(true, properties.getString("STORE_PATH"), topic, message);
 
-        messageStore.putMessage(topic != null ? topic : queue, message);
+        } else {
+            messageStore.putMessage(false, properties.getString("STORE_PATH"), queue, message);
+        }
+
+
     }
 
     @Override public void send(Message message, KeyValue properties) {
@@ -77,5 +84,10 @@ public class DefaultProducer  implements Producer {
 
     @Override public BatchToPartition createBatchToPartition(String partitionName, KeyValue properties) {
         throw new UnsupportedOperationException("Unsupported");
+    }
+
+    @Override
+    public void flush() {
+
     }
 }
