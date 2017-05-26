@@ -63,7 +63,7 @@ public class PageCacheManager {
 
     private MappedByteBuffer createNewPageToWirte(int index) {
         StringBuffer buffer = new StringBuffer();
-        buffer.append(storePath).append(File.separator).append(bucket).append("_").append(index);
+        buffer.append(storePath).append(File.separator).append(bucket).append("_").append(String.format("%03d", index));
         try {
             RandomAccessFile randAccessFile = new RandomAccessFile(new File(buffer.toString()), "rw");
             MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_WRITE, 0, Constants.PAGE_SIZE);
@@ -92,5 +92,15 @@ public class PageCacheManager {
         }
     }
 
+
+    public static void main(String[] args) {
+
+        File commitLogFileHolder = new File("/Users/Max/code/tianchi/tmp/");
+        File[] commitLogFiles = commitLogFileHolder.listFiles();
+        for (File file : commitLogFiles) {
+            System.out.println(file.getName());
+        }
+        System.out.println(commitLogFiles.length);
+    }
 
 }

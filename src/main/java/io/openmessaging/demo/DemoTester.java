@@ -8,7 +8,7 @@ import java.util.List;
 import org.junit.Assert;
 
 public class DemoTester {
-    private static final int MESSAGE_LENGTH = 100000;
+    private static final int MESSAGE_LENGTH = 10000;
 
     public static void main(String[] args) {
         KeyValue properties = new DefaultKeyValue();

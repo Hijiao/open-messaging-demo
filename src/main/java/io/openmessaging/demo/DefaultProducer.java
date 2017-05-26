@@ -20,6 +20,9 @@ public class DefaultProducer  implements Producer {
 
     private KeyValue properties;
 
+    public DefaultProducer() {
+    }
+
     public DefaultProducer(KeyValue properties) {
         this.properties = properties;
         queueManager.setFilePath(properties.getString("STORE_PATH"));

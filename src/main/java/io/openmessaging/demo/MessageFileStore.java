@@ -3,9 +3,7 @@ package io.openmessaging.demo;
 
 import io.openmessaging.BytesMessage;
 import io.openmessaging.Message;
-import io.openmessaging.Producer;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -25,8 +23,14 @@ public class MessageFileStore {
     private Map<String, LinkedList<MessageFileRecord>> messageBuckets = new ConcurrentHashMap<>();
     private Map<String, HashMap<String, Integer>> queueOffsets = new HashMap<>();
 
-    private PageCacheWriteUnitQueueManager queueManager = PageCacheWriteUnitQueueManager.getInstance();
+    private PageCacheWriteUnitQueueManager writeQueueManager = PageCacheWriteUnitQueueManager.getInstance();
+    private PageCacheReadUnitQueueManager readUnitQueueManager = PageCacheReadUnitQueueManager.getInstance();
 
+
+    MessageFileRecord newRecoder;
+    MessageFileRecord lastRecoder;
+
+    DefaultProducer producer = new DefaultProducer();
 
     public synchronized void putMessage(boolean isTopic, String filePath, String bucket, Message message) {
         if (!messageBuckets.containsKey(bucket)) {
@@ -36,8 +40,6 @@ public class MessageFileStore {
         allocateOnFileTableAndSendToWriteQueue(bucketList, isTopic, filePath, bucket, (BytesMessage) message);
     }
 
-    MessageFileRecord newRecoder = null;
-    MessageFileRecord lastRecoder = null;
 
     public MessageFileRecord allocateOnFileTableAndSendToWriteQueue(LinkedList<MessageFileRecord> bucketList, boolean isTopic, String filePath, String bucket, BytesMessage message) {
         if (bucketList.isEmpty()) {
@@ -48,7 +50,7 @@ public class MessageFileStore {
             newRecoder = new MessageFileRecord(lastRecoder.getRecord_pos() + message.getBody().length, message.getBody().length);
             lastRecoder = newRecoder;
         }
-        queueManager.getBucketWriteQueue(bucket, isTopic).producWriteUnit(new PageCacheWriteUnit(newRecoder, message));
+        writeQueueManager.getBucketWriteQueue(bucket, isTopic).producWriteUnit(new PageCacheWriteUnit(newRecoder, message));
         //return pageCacheManager.write(lastRecoder, isTopic, bucket, message);
         return null;
 
@@ -64,6 +66,21 @@ public class MessageFileStore {
 
 
     public synchronized Message pullMessage(String filepath, String queue, String bucket) {
+        PageCacheReadUnitQueue readUnitQueue = readUnitQueueManager.getBucketReadUnitQueue(bucket);
+        byte[] body = readUnitQueue.consumeUnit();
+        if (body == null) {
+            return null;
+        } else {
+            if (readUnitQueue.isTopic()) {
+                return producer.createBytesMessageToTopic(bucket, body);
+            }
+            return producer.createBytesMessageToQueue(bucket, body);
+
+        }
+
+
+
+
 //        LinkedList<MessageFileRecord> fileRecords = messageBuckets.get(bucket);
 //        if (fileRecords == null) {
 //            return null;
@@ -87,7 +104,6 @@ public class MessageFileStore {
 //        } else {
 //            return producer.createBytesMessageToQueue(bucket, messageBody);
 //        }
-        return null;
     }
 
 }

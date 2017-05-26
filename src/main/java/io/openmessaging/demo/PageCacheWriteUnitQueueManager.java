@@ -1,21 +1,16 @@
 package io.openmessaging.demo;
 
-import io.openmessaging.BytesMessage;
-
-import java.security.PublicKey;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * Created by Max on 2017/5/23.
  */
 public class PageCacheWriteUnitQueueManager {
+
     private static String filePath = null;
+
     private static final PageCacheWriteUnitQueueManager INSTANCE = new PageCacheWriteUnitQueueManager();
 
     public static PageCacheWriteUnitQueueManager getInstance() {

@@ -6,6 +6,7 @@ import io.openmessaging.BytesMessage;
  * Created by Max on 2017/5/23.
  */
 public class PageCacheWriteUnit {
+    //TODO ByteMessage ->byte[]
     private MessageFileRecord record;
     private BytesMessage message;
 
