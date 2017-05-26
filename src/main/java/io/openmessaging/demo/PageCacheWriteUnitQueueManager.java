@@ -2,6 +2,7 @@ package io.openmessaging.demo;
 
 import io.openmessaging.BytesMessage;
 
+import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -14,15 +15,26 @@ import java.util.concurrent.ThreadPoolExecutor;
  * Created by Max on 2017/5/23.
  */
 public class PageCacheWriteUnitQueueManager {
-    private static Map<String, PageCacheWriteUnitQueue> bucketsWriteQueueMap = new ConcurrentHashMap<>();
+    private static String filePath = null;
+    private static final PageCacheWriteUnitQueueManager INSTANCE = new PageCacheWriteUnitQueueManager();
+
+    public static PageCacheWriteUnitQueueManager getInstance() {
+        return INSTANCE;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
+    private static final Map<String, PageCacheWriteUnitQueue> bucketsWriteQueueMap = new ConcurrentHashMap<>();
 
     //使用： getBucketWriteQueue().productWriteUnit(writeUnit);
-    public static PageCacheWriteUnitQueue getBucketWriteQueue(String bucket) {
+    public PageCacheWriteUnitQueue getBucketWriteQueue(String bucket, boolean isTopic) {
         PageCacheWriteUnitQueue queue = bucketsWriteQueueMap.get(bucket);
         if (queue == null) {
-            queue = new PageCacheWriteUnitQueue();
+            queue = new PageCacheWriteUnitQueue(isTopic);
             bucketsWriteQueueMap.put(bucket, queue);
-            PageCacheWriteRunner runner = new PageCacheWriteRunner(queue);
+            PageCacheWriteRunner runner = new PageCacheWriteRunner(queue, bucket, filePath);
             ThreadPoolExecutor executor = PageCacheWritePoolManager.getThreadPool();
             executor.execute(runner);
         }

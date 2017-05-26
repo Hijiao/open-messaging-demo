@@ -9,6 +9,12 @@ public class PageCacheWriteUnit {
     private MessageFileRecord record;
     private BytesMessage message;
 
+
+    public PageCacheWriteUnit(MessageFileRecord re, BytesMessage message) {
+        this.record = re;
+        this.message = message;
+    }
+
     public MessageFileRecord getRecord() {
         return record;
     }

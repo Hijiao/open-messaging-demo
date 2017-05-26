@@ -23,4 +23,7 @@ public class PageCacheWritePoolManager {
         }
         return threadPool;
     }
+
+    //TODO get the process queue and shutdown them
+    //return threadPool.getQueue();
 }

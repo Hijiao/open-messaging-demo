@@ -8,7 +8,7 @@ import java.util.List;
 import org.junit.Assert;
 
 public class DemoTester {
-    private static final int MESSAGE_LENGTH = 1;
+    private static final int MESSAGE_LENGTH = 100000;
 
     public static void main(String[] args) {
         KeyValue properties = new DefaultKeyValue();
@@ -17,7 +17,7 @@ public class DemoTester {
         //所有producer和consumer的STORE_PATH都是一样的，选手可以自由在该路径下创建文件
          */
         //properties.put("STORE_PATH", "/home/admin/test");
-        properties.put("STORE_PATH", "/Users/Max/code/tianchi");
+        properties.put("STORE_PATH", "/Users/Max/code/tianchi/tmp");
 
         //这个测试程序的测试逻辑与实际评测相似，但注意这里是单线程的，实际测试时会是多线程的，并且发送完之后会Kill进程，再起消费逻辑
 

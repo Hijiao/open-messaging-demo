@@ -39,6 +39,6 @@ public class MessageFileReader {
 
     public static void main(String[] args) {
         MessageFileReader reader = new MessageFileReader();
-        System.out.println(new String(reader.read("/Users/Max/code/tianchi", "QUEUE2", new MessageFileRecord(false, 294, 7))));
+        System.out.println(new String(reader.read("/Users/Max/code/tianchi", "QUEUE2", new MessageFileRecord(294, 7))));
     }
 }

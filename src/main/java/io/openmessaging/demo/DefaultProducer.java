@@ -10,14 +10,19 @@ import io.openmessaging.Producer;
 import io.openmessaging.Promise;
 
 public class DefaultProducer  implements Producer {
+
     private MessageFactory messageFactory = new DefaultMessageFactory();
     //    private MessageStore messageStore =MessageStore.getInstance();
     private MessageFileStore messageStore = MessageFileStore.getInstance();
+
+    private PageCacheWriteUnitQueueManager queueManager = PageCacheWriteUnitQueueManager.getInstance();
+
 
     private KeyValue properties;
 
     public DefaultProducer(KeyValue properties) {
         this.properties = properties;
+        queueManager.setFilePath(properties.getString("STORE_PATH"));
     }
 
 
