@@ -25,7 +25,7 @@ public class MessageFileStore {
     }
 
 
-    private Map<String, LinkedList<Integer>> messageBuckets = new ConcurrentHashMap<>();
+    private Map<String, LinkedList<Integer>> messageBuckets = new HashMap<>();
     private Map<String, HashMap<String, Integer>> queueOffsets = new HashMap<>();
 
     private PageCacheWriteUnitQueueManager writeQueueManager = PageCacheWriteUnitQueueManager.getInstance();
@@ -36,16 +36,18 @@ public class MessageFileStore {
 
     public void putMessage(boolean isTopic, String bucket, Message message) {
         LinkedList<Integer> bucketList;
-        if (!messageBuckets.containsKey(bucket)) {
-            bucketList = new LinkedList<>();
-            messageBuckets.put(bucket, bucketList);
+        synchronized (messageBuckets) {
+            if (!messageBuckets.containsKey(bucket)) {
+                bucketList = new LinkedList<>();
+                messageBuckets.put(bucket, bucketList);
+            }
 
         }
+
         bucketList = messageBuckets.get(bucket);
 
         try {
             allocateOnFileTableAndSendToWriteQueue(bucketList, isTopic, bucket, (BytesMessage) message);
-
         } catch (Exception e) {
             System.out.println(e.getStackTrace());
         }
