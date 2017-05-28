@@ -32,25 +32,31 @@ public class MessageFileStore {
     private PageCacheReadUnitQueueManager readUnitQueueManager = PageCacheReadUnitQueueManager.getInstance();
 
 
-
     DefaultProducer producer = new DefaultProducer();
 
-    public synchronized void putMessage(boolean isTopic, String filePath, String bucket, Message message) {
+    public void putMessage(boolean isTopic, String filePath, String bucket, Message message) {
         LinkedList<Integer> bucketList;
+
         if (!messageBuckets.containsKey(bucket)) {
             bucketList = new LinkedList<>();
             messageBuckets.put(bucket, bucketList);
-        } else {
-            bucketList = messageBuckets.get(bucket);
-        }
 
-        allocateOnFileTableAndSendToWriteQueue(bucketList, isTopic, filePath, bucket, (BytesMessage) message);
+
+        }
+        bucketList = messageBuckets.get(bucket);
+
+        try {
+            allocateOnFileTableAndSendToWriteQueue(bucketList, isTopic, filePath, bucket, (BytesMessage) message);
+
+        } catch (Exception e) {
+            System.out.println(e.getStackTrace());
+        }
     }
 
 
-    public void allocateOnFileTableAndSendToWriteQueue(LinkedList<Integer> bucketList, boolean isTopic, String filePath, String bucket, BytesMessage message) {
+    public void allocateOnFileTableAndSendToWriteQueue(LinkedList<Integer> bucketList, boolean isTopic, String filePath, String bucket, BytesMessage message) throws InterruptedException {
         bucketList.addLast(message.getBody().length);
-        writeQueueManager.getBucketWriteQueue(bucket, isTopic).producWriteBody(message.getBody());
+        writeQueueManager.getBucketWriteQueue(bucket, isTopic).productWriteBody(message.getBody());
         //return pageCacheManager.write(lastRecoder, isTopic, bucket, message);
 
     }

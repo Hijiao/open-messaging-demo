@@ -24,7 +24,8 @@ public class PageCacheWriteUnitQueueManager {
     private static final Map<String, PageCacheWriteUnitQueue> bucketsWriteQueueMap = new ConcurrentHashMap<>();
 
     //使用： getBucketWriteQueue().productWriteUnit(writeUnit);
-    public PageCacheWriteUnitQueue getBucketWriteQueue(String bucket, boolean isTopic) {
+    public synchronized PageCacheWriteUnitQueue getBucketWriteQueue(String bucket, boolean isTopic) {
+
         PageCacheWriteUnitQueue queue = bucketsWriteQueueMap.get(bucket);
         if (queue == null) {
             queue = new PageCacheWriteUnitQueue(isTopic);
