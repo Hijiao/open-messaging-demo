@@ -34,19 +34,17 @@ public class MessageFileStore {
 
     DefaultProducer producer = new DefaultProducer();
 
-    public void putMessage(boolean isTopic, String filePath, String bucket, Message message) {
+    public void putMessage(boolean isTopic, String bucket, Message message) {
         LinkedList<Integer> bucketList;
-
         if (!messageBuckets.containsKey(bucket)) {
             bucketList = new LinkedList<>();
             messageBuckets.put(bucket, bucketList);
-
 
         }
         bucketList = messageBuckets.get(bucket);
 
         try {
-            allocateOnFileTableAndSendToWriteQueue(bucketList, isTopic, filePath, bucket, (BytesMessage) message);
+            allocateOnFileTableAndSendToWriteQueue(bucketList, isTopic, bucket, (BytesMessage) message);
 
         } catch (Exception e) {
             System.out.println(e.getStackTrace());
@@ -54,7 +52,7 @@ public class MessageFileStore {
     }
 
 
-    public void allocateOnFileTableAndSendToWriteQueue(LinkedList<Integer> bucketList, boolean isTopic, String filePath, String bucket, BytesMessage message) throws InterruptedException {
+    public void allocateOnFileTableAndSendToWriteQueue(LinkedList<Integer> bucketList, boolean isTopic, String bucket, BytesMessage message) throws InterruptedException {
         bucketList.addLast(message.getBody().length);
         writeQueueManager.getBucketWriteQueue(bucket, isTopic).productWriteBody(message.getBody());
         //return pageCacheManager.write(lastRecoder, isTopic, bucket, message);
