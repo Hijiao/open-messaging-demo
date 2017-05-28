@@ -12,20 +12,23 @@ import java.util.*;
  */
 public class PageCacheManager {
 
+    private String storePath;//TODO init
+    private String bucket;
+
     public PageCacheManager(String bucket, String storePath) {
         this.bucket = bucket;
         this.storePath = storePath;
     }
 
-    private String storePath;//TODO init
-    private String bucket;
+
 
 
     private LinkedList<MappedByteBuffer> bucketPageList = new LinkedList<>();
 
-    private int currPageNumber;
+    private int currPageNumber = 0;
     private MappedByteBuffer lastPage;
-    private int endPos;
+    MappedByteBuffer currPage;
+    int currPageRemaining;
 
 
     public void write(PageCacheWriteUnit unit) {
@@ -37,7 +40,7 @@ public class PageCacheManager {
         int messageFileRecordLength = unit.getMessage().getBody().length;
         long messageFileRecordStartPos = unit.getRecord().getRecord_pos();
 
-        endPos = (int) messageFileRecordStartPos + messageFileRecordLength - 1;
+        // endPos = (int) messageFileRecordStartPos + messageFileRecordLength - 1;
 
         //if (Constants.getPageNumber(endPos) > currPageNumber) {
         int stop_pos = lastPage.remaining();
@@ -60,6 +63,62 @@ public class PageCacheManager {
 
     }
 
+    public void writeByte(byte[] body) {
+        if (bucketPageList.isEmpty()) {
+            lastPage = createNewPageToWirte(0);
+        } else {
+            lastPage = bucketPageList.getLast();
+        }
+        currPageRemaining = lastPage.remaining();
+        if (currPageRemaining < body.length) {
+
+            try {
+                lastPage.put(body, 0, currPageRemaining);
+            } catch (Exception e) {
+                System.out.println(e.getStackTrace());
+            }
+            flushAndCloseLastPage();
+
+            lastPage = createNewPageToWirte(++currPageNumber);
+
+            //TODO 每次都有bounder check，后期可以优化，自己来for循环insert
+            lastPage.put(body, lastPage.remaining(), body.length - currPageRemaining);
+            //for (int i =0;i<len;++i)
+            //tarByteArray=lastPage.get();
+        } else {
+            lastPage.put(body, 0, body.length);//TODO 每次都有bounder check，后期可以优化，自己来for循环insert
+        }
+
+    }
+
+    public byte[] readByte(int messageLen) {
+        if (currPage == null) {
+            currPage = createNewPageToRead(0);
+        }
+
+        byte[] body = new byte[messageLen];
+        currPageRemaining = currPage.remaining();
+        if (currPageRemaining < messageLen) {
+            for (int l = 0; l < currPageRemaining; l++) {
+                try {
+                    body[l] = currPage.get();
+                } catch (Exception e) {
+                    System.out.println(e);
+                }
+
+            }
+            currPage = createNewPageToRead(++currPageNumber);
+            for (int l = currPageRemaining; l < messageLen; l++) {
+                body[l] = currPage.get();
+            }
+        } else {
+            for (int l = 0; l < messageLen; l++) {
+                body[l] = currPage.get();
+            }
+        }
+        return body;
+    }
+
 
     private MappedByteBuffer createNewPageToWirte(int index) {
         StringBuffer buffer = new StringBuffer();
@@ -74,6 +133,21 @@ public class PageCacheManager {
             return null;
         }
     }
+
+    private MappedByteBuffer createNewPageToRead(int index) {
+        StringBuffer buffer = new StringBuffer();
+        buffer.append(storePath).append(File.separator).append(bucket).append("_").append(String.format("%03d", index));
+        try {
+            RandomAccessFile randAccessFile = new RandomAccessFile(new File(buffer.toString()), "r");
+            MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, Constants.PAGE_SIZE);
+            bucketPageList.add(newPage);
+            return newPage;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
 
     public void flushAndCloseLastPage() {
         try {

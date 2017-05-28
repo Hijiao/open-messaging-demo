@@ -9,10 +9,15 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Created by Max on 2017/5/19.
  */
 public class MessageFileStore {
+
+    static Logger logger = LoggerFactory.getLogger(MessageFileStore.class);
     private static final MessageFileStore INSTANCE = new MessageFileStore();
 
     public static MessageFileStore getInstance() {
@@ -20,65 +25,59 @@ public class MessageFileStore {
     }
 
 
-    private Map<String, LinkedList<MessageFileRecord>> messageBuckets = new ConcurrentHashMap<>();
+    private Map<String, LinkedList<Integer>> messageBuckets = new ConcurrentHashMap<>();
     private Map<String, HashMap<String, Integer>> queueOffsets = new HashMap<>();
 
     private PageCacheWriteUnitQueueManager writeQueueManager = PageCacheWriteUnitQueueManager.getInstance();
     private PageCacheReadUnitQueueManager readUnitQueueManager = PageCacheReadUnitQueueManager.getInstance();
 
 
-    MessageFileRecord newRecoder;
-    MessageFileRecord lastRecoder;
 
     DefaultProducer producer = new DefaultProducer();
 
     public synchronized void putMessage(boolean isTopic, String filePath, String bucket, Message message) {
+        LinkedList<Integer> bucketList;
         if (!messageBuckets.containsKey(bucket)) {
-            messageBuckets.put(bucket, new LinkedList<>());
+            bucketList = new LinkedList<>();
+            messageBuckets.put(bucket, bucketList);
+        } else {
+            bucketList = messageBuckets.get(bucket);
         }
-        LinkedList<MessageFileRecord> bucketList = messageBuckets.get(bucket);
+
         allocateOnFileTableAndSendToWriteQueue(bucketList, isTopic, filePath, bucket, (BytesMessage) message);
     }
 
 
-    public MessageFileRecord allocateOnFileTableAndSendToWriteQueue(LinkedList<MessageFileRecord> bucketList, boolean isTopic, String filePath, String bucket, BytesMessage message) {
-        if (bucketList.isEmpty()) {
-            newRecoder = new MessageFileRecord(0, message.getBody().length);
-            bucketList.addLast(newRecoder);
-            lastRecoder = newRecoder;
-        } else {
-            newRecoder = new MessageFileRecord(lastRecoder.getRecord_pos() + message.getBody().length, message.getBody().length);
-            lastRecoder = newRecoder;
-        }
-        writeQueueManager.getBucketWriteQueue(bucket, isTopic).producWriteUnit(new PageCacheWriteUnit(newRecoder, message));
+    public void allocateOnFileTableAndSendToWriteQueue(LinkedList<Integer> bucketList, boolean isTopic, String filePath, String bucket, BytesMessage message) {
+        bucketList.addLast(message.getBody().length);
+        writeQueueManager.getBucketWriteQueue(bucket, isTopic).producWriteBody(message.getBody());
         //return pageCacheManager.write(lastRecoder, isTopic, bucket, message);
-        return null;
 
     }
 
     public void showAllBuckets() {
         for (String bucket : messageBuckets.keySet()) {
-            for (MessageFileRecord record : messageBuckets.get(bucket)) {
-                System.out.println("{file=" + bucket + ", " + record.toString());
+            for (Integer record : messageBuckets.get(bucket)) {
+                System.out.println("{bucket = " + bucket + ", len = " + record.toString());
             }
         }
     }
 
 
-    public synchronized Message pullMessage(String filepath, String queue, String bucket) {
-        PageCacheReadUnitQueue readUnitQueue = readUnitQueueManager.getBucketReadUnitQueue(bucket);
-        byte[] body = readUnitQueue.consumeUnit();
+    public synchronized Message pullMessage(String filepath, boolean isTopic, String bucket) {
+        LinkedList<Integer> bucketList = messageBuckets.get(bucket);
+        PageCacheReadUnitQueue readUnitQueue = readUnitQueueManager.getBucketReadUnitQueue(bucketList, bucket, isTopic);
+        byte[] body = readUnitQueue.consumeReadBody();
         if (body == null) {
             return null;
         } else {
+            logger.debug("body: {}", body);
             if (readUnitQueue.isTopic()) {
                 return producer.createBytesMessageToTopic(bucket, body);
             }
             return producer.createBytesMessageToQueue(bucket, body);
 
         }
-
-
 
 
 //        LinkedList<MessageFileRecord> fileRecords = messageBuckets.get(bucket);

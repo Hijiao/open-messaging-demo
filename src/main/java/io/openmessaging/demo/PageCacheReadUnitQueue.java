@@ -16,12 +16,11 @@ public class PageCacheReadUnitQueue {
     private ConcurrentLinkedQueue<byte[]> queue = new ConcurrentLinkedQueue();
 
 
-    public void producWriteUnit(byte[] messageBody) {
+    public void productReadBody(byte[] messageBody) {
         queue.offer(messageBody);
     }
 
-    public byte[] consumeUnit() {
-
+    public byte[] consumeReadBody() {
         if (queue.isEmpty()) {
             return null;
         } else return queue.poll();

@@ -14,18 +14,18 @@ public class PageCacheWriteUnitQueue extends Thread {
 
     private boolean isTopic;
 
-    private LinkedBlockingQueue<PageCacheWriteUnit> queue = new LinkedBlockingQueue<>();
+    private LinkedBlockingQueue<byte[]> queue = new LinkedBlockingQueue<>();
 
 
-    public void producWriteUnit(PageCacheWriteUnit unit) {
+    public void producWriteBody(byte[] body) {
         try {
-            queue.put(unit);
+            queue.put(body);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    public PageCacheWriteUnit consumeWriteUnit() {
+    public byte[] consumeWriteBody() {
         try {
             return queue.take();
         } catch (InterruptedException e) {

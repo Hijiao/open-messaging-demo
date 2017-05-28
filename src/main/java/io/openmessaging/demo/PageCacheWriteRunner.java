@@ -18,7 +18,7 @@ public class PageCacheWriteRunner extends Thread {
 
     public void run() {
         while (true) {
-            cacheManager.write(queue.consumeWriteUnit());
+            cacheManager.writeByte(queue.consumeWriteBody());
         }
     }
 }

@@ -1,7 +1,9 @@
 package io.openmessaging.demo;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * Created by Max on 2017/5/26.
@@ -16,15 +18,24 @@ public class PageCacheReadUnitQueueManager {
 
     private static final Map<String, PageCacheReadUnitQueue> bucketsReadQueueMap = new ConcurrentHashMap<>();
 
-    private static final void loadCacheReadUnitQueue() {
+    private static String filePath;
 
-
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
     }
 
 
-    //使用：getBucketReadUnitQueue.consumeUnit;
-    public PageCacheReadUnitQueue getBucketReadUnitQueue(String bucket) {
-        return bucketsReadQueueMap.get(bucket);
+    //使用：getBucketReadUnitQueue.consumeReadBody;
+    public PageCacheReadUnitQueue getBucketReadUnitQueue(List lenList, String bucket, boolean isTopic) {
+        PageCacheReadUnitQueue queue = bucketsReadQueueMap.get(bucket);
+        if (queue == null) {
+            queue = new PageCacheReadUnitQueue(isTopic);
+            bucketsReadQueueMap.put(bucket, queue);
+            PageCacheReadRunner runner = new PageCacheReadRunner(lenList, queue, bucket, filePath);
+            ThreadPoolExecutor executor = PageCacheReadPoolManager.getThreadPool();
+            executor.execute(runner);
+        }
+        return queue;
     }
 
 }
