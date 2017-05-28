@@ -23,7 +23,7 @@ public class PageCacheManager {
 
 
 
-    private LinkedList<MappedByteBuffer> bucketPageList = new LinkedList<>();
+
 
     private int currPageNumber = 0;
     private MappedByteBuffer lastPage;
@@ -31,62 +31,32 @@ public class PageCacheManager {
     int currPageRemaining;
 
 
-    public void write(PageCacheWriteUnit unit) {
-        if (bucketPageList.isEmpty()) {
-            createNewPageToWirte(0);
-        }
-        lastPage = bucketPageList.getLast();
 
-        int messageFileRecordLength = unit.getMessage().getBody().length;
-        long messageFileRecordStartPos = unit.getRecord().getRecord_pos();
 
-        // endPos = (int) messageFileRecordStartPos + messageFileRecordLength - 1;
-
-        //if (Constants.getPageNumber(endPos) > currPageNumber) {
-        int stop_pos = lastPage.remaining();
-        if (stop_pos < messageFileRecordLength) {
-            //write to last page fist,then clean it
-//            int stop_pos=Constants.PAGE_SIZE-Constants.getPageOffset(endPos);
-            try {
-                lastPage.put(unit.getMessage().getBody(), 0, stop_pos);
-            } catch (Exception e) {
-                System.out.println(e.getStackTrace());
-            }
-            flushAndCloseLastPage();
-
-            lastPage = createNewPageToWirte(++currPageNumber);
-
-            lastPage.put(unit.getMessage().getBody(), stop_pos, messageFileRecordLength - stop_pos);
-        } else {
-            lastPage.put(unit.getMessage().getBody());
-        }
-
-    }
 
     public void writeByte(byte[] body) {
-        if (bucketPageList.isEmpty()) {
+        if (lastPage == null) {
             lastPage = createNewPageToWirte(0);
-        } else {
-            lastPage = bucketPageList.getLast();
         }
         currPageRemaining = lastPage.remaining();
         if (currPageRemaining < body.length) {
-
-            try {
-                lastPage.put(body, 0, currPageRemaining);
-            } catch (Exception e) {
-                System.out.println(e.getStackTrace());
+            for (int i = 0; i < currPageRemaining; i++) {
+                lastPage.put(body[i]);
             }
+
+            lastPage.put(body, 0, currPageRemaining);
             flushAndCloseLastPage();
 
             lastPage = createNewPageToWirte(++currPageNumber);
-
-            //TODO 每次都有bounder check，后期可以优化，自己来for循环insert
-            lastPage.put(body, lastPage.remaining(), body.length - currPageRemaining);
+            for (int i = currPageRemaining; i < body.length; i++) {
+                lastPage.put(body[i]);
+            }
             //for (int i =0;i<len;++i)
             //tarByteArray=lastPage.get();
         } else {
-            lastPage.put(body, 0, body.length);//TODO 每次都有bounder check，后期可以优化，自己来for循环insert
+            for (int i = 0; i < body.length; i++) {
+                lastPage.put(body[i]);
+            }
         }
 
     }
@@ -126,7 +96,6 @@ public class PageCacheManager {
         try {
             RandomAccessFile randAccessFile = new RandomAccessFile(new File(buffer.toString()), "rw");
             MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_WRITE, 0, Constants.PAGE_SIZE);
-            bucketPageList.add(newPage);
             return newPage;
         } catch (Exception e) {
             e.printStackTrace();
@@ -140,7 +109,6 @@ public class PageCacheManager {
         try {
             RandomAccessFile randAccessFile = new RandomAccessFile(new File(buffer.toString()), "r");
             MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, Constants.PAGE_SIZE);
-            bucketPageList.add(newPage);
             return newPage;
         } catch (Exception e) {
             e.printStackTrace();
@@ -151,14 +119,11 @@ public class PageCacheManager {
 
     public void flushAndCloseLastPage() {
         try {
-            if (bucketPageList.isEmpty()) {
-                return;
-            }
-            MappedByteBuffer page = bucketPageList.getLast();
-            page.force();
-            Method getCleanerMethod = page.getClass().getMethod("cleaner", new Class[0]);
+//            MappedByteBuffer page = bucketPageList.getLast();
+//            page.force();
+            Method getCleanerMethod = lastPage.getClass().getMethod("cleaner", new Class[0]);
             getCleanerMethod.setAccessible(true);
-            sun.misc.Cleaner cleaner = (sun.misc.Cleaner) getCleanerMethod.invoke(page, new Object[0]);
+            sun.misc.Cleaner cleaner = (sun.misc.Cleaner) getCleanerMethod.invoke(lastPage, new Object[0]);
             cleaner.clean();
             System.gc();
         } catch (Exception e) {
