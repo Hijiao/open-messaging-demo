@@ -5,7 +5,7 @@ package io.openmessaging.demo;
  */
 public class Constants {
 
-    public static final int PAGE_SIZE_BITE_COUNT = 24;
+    public static final int PAGE_SIZE_BITE_COUNT = 17; //128k
 
     public static final int PAGE_SIZE = 1 << PAGE_SIZE_BITE_COUNT; //8M  COUNT=23
 
