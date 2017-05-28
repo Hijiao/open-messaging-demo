@@ -45,7 +45,7 @@ public class PageCacheManager {
             }
 
             lastPage.put(body, 0, currPageRemaining);
-            flushAndCloseLastPage();
+            //flushAndCloseLastPage();
 
             lastPage = createNewPageToWirte(++currPageNumber);
             for (int i = currPageRemaining; i < body.length; i++) {
