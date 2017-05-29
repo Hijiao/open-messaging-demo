@@ -5,10 +5,12 @@ package io.openmessaging.demo;
  */
 public class Constants {
 
-    public static final int PAGE_SIZE_BITE_COUNT = 26; //64M
+    // public static final int PAGE_SIZE_BITE_COUNT = 29; //512M
 //    public static final int PAGE_SIZE_BITE_COUNT = 26; //64M
 
-    public static final int PAGE_SIZE = 1 << PAGE_SIZE_BITE_COUNT; //8M  COUNT=23
+
+    //    public static final int PAGE_SIZE = 1 << PAGE_SIZE_BITE_COUNT; //8M  COUNT=23
+    public static final int PAGE_SIZE = 1024 * 1024 * 128; //128M
 
     public static final int offsetCounterpart = PAGE_SIZE - 1;
 
@@ -21,19 +23,19 @@ public class Constants {
 
     public static final int SEND_TO_WRITE_QUEUE_BATCH_SIZE = 1024;
 
-    public static final int getPageNumber(int pos) {
-        return (pos >> PAGE_SIZE_BITE_COUNT);
-    }
-
-    public static final int getPageOffset(int pos) {
-        return (pos & offsetCounterpart);
-    }
-
-    public static void main(String[] args) {
-        int pos = PAGE_SIZE;
-        System.out.println("pageSize: " + PAGE_SIZE);
-        System.out.println("pageNumber: " + getPageNumber(pos));
-        System.out.println("offset: " + getPageOffset(pos));
-    }
+//    public static final int getPageNumber(int pos) {
+//        return (pos >> PAGE_SIZE_BITE_COUNT);
+//    }
+//
+//    public static final int getPageOffset(int pos) {
+//        return (pos & offsetCounterpart);
+//    }
+//
+//    public static void main(String[] args) {
+//        int pos = PAGE_SIZE;
+//        System.out.println("pageSize: " + PAGE_SIZE);
+//        System.out.println("pageNumber: " + getPageNumber(pos));
+//        System.out.println("offset: " + getPageOffset(pos));
+//    }
 
 }

@@ -12,18 +12,17 @@ public class PageCacheReadRunner extends Thread {
     public PageCacheReadRunner(PageCacheReadUnitQueue queue, String queueBucketName, String storePath) {
         this.queue = queue;
         this.cacheManager = new PageCacheManager(queueBucketName, storePath);
+        System.out.println("init new read_thread");
     }
 
     public void run() {
         try {
-            while (true) {
-                byte[] body = cacheManager.readByte();
-                if (body == null) {
-                    queue.setFinish(true);
-                    break;
-                }
+            byte[] body = cacheManager.readByte();
+            while (body != null) {
                 queue.productReadBody(body);
+                body = cacheManager.readByte();
             }
+            queue.setFinish(true);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

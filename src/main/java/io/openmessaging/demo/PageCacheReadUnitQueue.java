@@ -27,10 +27,19 @@ public class PageCacheReadUnitQueue {
 //        if (queue.isEmpty()) {
 //            return null;
 //        } else return queue.poll();
-        if (isFinish) {
-            return null;
+//        if (isFinish) {
+//            if (queue.isEmpty())
+//                return null;
+//        }
+
+        while (queue.isEmpty()) {
+            if (isFinish) {
+                return null;
+            }
         }
-        return queue.take();
+
+//        return queue.take();
+        return queue.poll();
     }
 
     public void setFinish(boolean finish) {

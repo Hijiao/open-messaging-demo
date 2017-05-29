@@ -20,7 +20,7 @@ public class PageCacheManager {
     }
 
 
-    private int currPageNumber = 0;
+    private int currPageNumber = -1;
     private MappedByteBuffer lastPage;
     MappedByteBuffer currPage;
     int currPageRemaining;
@@ -61,8 +61,11 @@ public class PageCacheManager {
     byte[] indexByte = new byte[4];
 
     public byte[] readByte() {
+        if (currPage == null && currPageNumber == -1) {
+            currPage = createNewPageToRead(++currPageNumber);
+        }
         if (currPage == null) {
-            currPage = createNewPageToRead(0);
+            return null;
         }
         currPageRemaining = currPage.remaining();
 
@@ -70,6 +73,9 @@ public class PageCacheManager {
             for (int i = 0; i < currPageRemaining; i++)
                 indexByte[i] = currPage.get();
             currPage = createNewPageToRead(++currPageNumber);
+            if (currPage == null) {
+                return null;
+            }
             for (int i = currPageRemaining; i < 4; i++) {
                 indexByte[i] = currPage.get();
             }
@@ -90,6 +96,9 @@ public class PageCacheManager {
                 body[i] = currPage.get();
             }
             currPage = createNewPageToRead(++currPageNumber);
+            if (currPage == null) {
+                return null;
+            }
             for (int l = currPageRemaining; l < messageLen; l++) {
                 body[l] = currPage.get();
             }
@@ -123,7 +132,7 @@ public class PageCacheManager {
             MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, Constants.PAGE_SIZE);
             return newPage;
         } catch (Exception e) {
-            e.printStackTrace();
+            //e.printStackTrace();
             return null;
         }
     }

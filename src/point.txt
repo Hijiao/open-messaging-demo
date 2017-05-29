@@ -23,3 +23,5 @@
 写入queue之前做缓冲 Produce Finished, sendNum 40000000, Cost 119188 ms
 
 1M  Should send 40000000 but actual 23459481
+
+64M sendNum 40000000, Cost 197470 ms  1180M 13.2M  814M 1951M
