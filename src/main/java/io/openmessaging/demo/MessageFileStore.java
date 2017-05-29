@@ -38,27 +38,28 @@ public class MessageFileStore {
 
     public void putMessage(boolean isTopic, String bucket, Message message) {
         LinkedList<Integer> bucketList;
-//        synchronized (messageBuckets) {
-//            if (!messageBuckets.containsKey(bucket)) {
-//                bucketList = new LinkedList<>();
-//                messageBuckets.put(bucket, bucketList);
-//            }
-//
-//        }
+        synchronized (messageBuckets) {
+            if (!messageBuckets.containsKey(bucket)) {
 
-
-        bucketList = messageBuckets.get(bucket);
-
-        while (bucketList == null) {
-            bucketList = messageBuckets.get(bucket);
-            if (bucketList != null) {
-                break;
-            } else {
                 bucketList = new LinkedList<>();
                 messageBuckets.put(bucket, bucketList);
                 beforeWriteBody.put(bucket, new ArrayList(Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE));
             }
         }
+
+
+        bucketList = messageBuckets.get(bucket);
+
+//        while (bucketList == null) {
+//            bucketList = messageBuckets.get(bucket);
+//            if (bucketList != null) {
+//                break;
+//            } else {
+//                bucketList = new LinkedList<>();
+//                messageBuckets.put(bucket, bucketList);
+//                beforeWriteBody.put(bucket, new ArrayList(Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE));
+//            }
+//        }
         allocateOnFileTableAndSendToWriteQueue(bucketList, isTopic, bucket, (BytesMessage) message);
     }
 
@@ -68,7 +69,6 @@ public class MessageFileStore {
 
         synchronized (beforeWriteBodyList) {
             beforeWriteBodyList.add(message.getBody());
-
             if (beforeWriteBodyList.size() > Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE) {
                 PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket, isTopic);
                 try {
