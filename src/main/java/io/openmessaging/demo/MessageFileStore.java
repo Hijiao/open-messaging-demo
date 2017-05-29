@@ -49,15 +49,14 @@ public class MessageFileStore {
 
         bucketList = messageBuckets.get(bucket);
 
-        while (bucket == null) {
+        while (bucketList == null) {
             bucketList = messageBuckets.get(bucket);
-            if (bucket != null) {
+            if (bucketList != null) {
                 break;
             } else {
                 bucketList = new LinkedList<>();
-                List messages = new ArrayList(Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE);
                 messageBuckets.put(bucket, bucketList);
-                beforeWriteBody.put(bucket, messages);
+                beforeWriteBody.put(bucket, new ArrayList(Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE));
             }
         }
         allocateOnFileTableAndSendToWriteQueue(bucketList, isTopic, bucket, (BytesMessage) message);
@@ -66,20 +65,24 @@ public class MessageFileStore {
 
     public void allocateOnFileTableAndSendToWriteQueue(LinkedList<Integer> bucketList, boolean isTopic, String bucket, BytesMessage message) {
         List<byte[]> beforeWriteBodyList = beforeWriteBody.get(bucket);
-        beforeWriteBodyList.add(message.getBody());
 
-        if (beforeWriteBodyList.size() > Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE) {
-            PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket, isTopic);
-            try {
-                for (int i = 0; i < beforeWriteBodyList.size(); i++) {
-                    queue.productWriteBody(beforeWriteBodyList.get(i));
+        synchronized (beforeWriteBodyList) {
+            beforeWriteBodyList.add(message.getBody());
+
+            if (beforeWriteBodyList.size() > Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE) {
+                PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket, isTopic);
+                try {
+                    for (int i = 0; i < beforeWriteBodyList.size(); i++) {
+                        queue.productWriteBody(beforeWriteBodyList.get(i));
+                    }
+                    beforeWriteBodyList.clear();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-                beforeWriteBodyList.clear();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
 
+            }
         }
+
 
         //bucketList.addLast(message.getBody().length);
         //writeQueueManager.getBucketWriteQueue(bucket, isTopic).productWriteBody(message.getBody());
