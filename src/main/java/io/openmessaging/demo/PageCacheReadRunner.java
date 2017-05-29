@@ -12,7 +12,8 @@ public class PageCacheReadRunner extends Thread {
     public PageCacheReadRunner(PageCacheReadUnitQueue queue, String queueBucketName, String storePath) {
         this.queue = queue;
         this.cacheManager = new PageCacheManager(queueBucketName, storePath);
-        System.out.println("init new read_thread");
+        System.out.println("init new read_thread： " + queueBucketName);
+        Thread.currentThread().setName(queueBucketName);
     }
 
     public void run() {

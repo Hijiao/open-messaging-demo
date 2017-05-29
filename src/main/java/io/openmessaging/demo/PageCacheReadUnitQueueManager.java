@@ -1,5 +1,6 @@
 package io.openmessaging.demo;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,7 +17,7 @@ public class PageCacheReadUnitQueueManager {
     }
 
 
-    private static final Map<String, PageCacheReadUnitQueue> bucketsReadQueueMap = new ConcurrentHashMap<>();
+    private static final Map<String, PageCacheReadUnitQueue> bucketsReadQueueMap = new HashMap<>();
 
     private static String filePath;
 
