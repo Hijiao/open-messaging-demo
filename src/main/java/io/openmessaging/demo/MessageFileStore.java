@@ -5,6 +5,7 @@ import io.openmessaging.BytesMessage;
 import io.openmessaging.Message;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +23,7 @@ public class MessageFileStore {
     }
 
 
-    private Map<String, List<byte[]>> beforeWriteBody = new HashMap<>();
+    private Map<String, List<byte[]>> beforeWriteBody = new ConcurrentHashMap<>();
 
     private PageCacheWriteUnitQueueManager writeQueueManager = PageCacheWriteUnitQueueManager.getInstance();
     private PageCacheReadUnitQueueManager readUnitQueueManager = PageCacheReadUnitQueueManager.getInstance();
@@ -49,7 +50,6 @@ public class MessageFileStore {
             if (beforeWriteBodyList.size() > Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE) {
                 PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket, isTopic);
                 sendBatchMessageToQueue(beforeWriteBodyList, queue);
-
             }
         }
 
@@ -65,7 +65,6 @@ public class MessageFileStore {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
     }
 
 
@@ -85,9 +84,7 @@ public class MessageFileStore {
                 return producer.createBytesMessageToTopic(bucket, body);
             }
             return producer.createBytesMessageToQueue(bucket, body);
-
         }
-
     }
 
     public synchronized void flushWriteBuffers() {

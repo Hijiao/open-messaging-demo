@@ -19,7 +19,6 @@ public class DefaultProducer implements Producer {
     private MessageFileStore messageStore = MessageFileStore.getInstance();
 
     private PageCacheWriteUnitQueueManager queueManager = PageCacheWriteUnitQueueManager.getInstance();
-    private static final ThreadPoolExecutor executor = PageCacheWritePoolManager.getThreadPool();
 
 
     private KeyValue properties;

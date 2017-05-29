@@ -21,3 +21,5 @@
 8M              Should send 40000000 but actual 36389193
 注掉gc，8M       Should send 40000000 but actual 35742021
 写入queue之前做缓冲 Produce Finished, sendNum 40000000, Cost 119188 ms
+
+1M  Should send 40000000 but actual 23459481
