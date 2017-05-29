@@ -4,10 +4,10 @@ package io.openmessaging.demo;
 import io.openmessaging.BytesMessage;
 import io.openmessaging.Message;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
+import java.nio.MappedByteBuffer;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,36 +27,62 @@ public class MessageFileStore {
 
     private Map<String, LinkedList<Integer>> messageBuckets = new HashMap<>();
     private Map<String, HashMap<String, Integer>> queueOffsets = new HashMap<>();
+    private Map<String, List<byte[]>> beforeWriteBody = new HashMap<>();
 
     private PageCacheWriteUnitQueueManager writeQueueManager = PageCacheWriteUnitQueueManager.getInstance();
     private PageCacheReadUnitQueueManager readUnitQueueManager = PageCacheReadUnitQueueManager.getInstance();
+    private static AtomicInteger beforeWriteBodyCount = new AtomicInteger();
 
 
     DefaultProducer producer = new DefaultProducer();
 
     public void putMessage(boolean isTopic, String bucket, Message message) {
         LinkedList<Integer> bucketList;
-        synchronized (messageBuckets) {
-            if (!messageBuckets.containsKey(bucket)) {
+//        synchronized (messageBuckets) {
+//            if (!messageBuckets.containsKey(bucket)) {
+//                bucketList = new LinkedList<>();
+//                messageBuckets.put(bucket, bucketList);
+//            }
+//
+//        }
+
+
+        bucketList = messageBuckets.get(bucket);
+
+        while (bucket == null) {
+            bucketList = messageBuckets.get(bucket);
+            if (bucket != null) {
+                break;
+            } else {
                 bucketList = new LinkedList<>();
+                List messages = new ArrayList(Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE);
                 messageBuckets.put(bucket, bucketList);
+                beforeWriteBody.put(bucket, messages);
+            }
+        }
+        allocateOnFileTableAndSendToWriteQueue(bucketList, isTopic, bucket, (BytesMessage) message);
+    }
+
+
+    public void allocateOnFileTableAndSendToWriteQueue(LinkedList<Integer> bucketList, boolean isTopic, String bucket, BytesMessage message) {
+        List<byte[]> beforeWriteBodyList = beforeWriteBody.get(bucket);
+        beforeWriteBodyList.add(message.getBody());
+
+        if (beforeWriteBodyList.size() > Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE) {
+            PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket, isTopic);
+            try {
+                for (int i = 0; i < beforeWriteBodyList.size(); i++) {
+                    queue.productWriteBody(beforeWriteBodyList.get(i));
+                }
+                beforeWriteBodyList.clear();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
 
         }
 
-        bucketList = messageBuckets.get(bucket);
-
-        try {
-            allocateOnFileTableAndSendToWriteQueue(bucketList, isTopic, bucket, (BytesMessage) message);
-        } catch (Exception e) {
-            System.out.println(e.getStackTrace());
-        }
-    }
-
-
-    public void allocateOnFileTableAndSendToWriteQueue(LinkedList<Integer> bucketList, boolean isTopic, String bucket, BytesMessage message) throws InterruptedException {
-        bucketList.addLast(message.getBody().length);
-        writeQueueManager.getBucketWriteQueue(bucket, isTopic).productWriteBody(message.getBody());
+        //bucketList.addLast(message.getBody().length);
+        //writeQueueManager.getBucketWriteQueue(bucket, isTopic).productWriteBody(message.getBody());
         //return pageCacheManager.write(lastRecoder, isTopic, bucket, message);
 
     }

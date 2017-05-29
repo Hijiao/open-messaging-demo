@@ -17,5 +17,6 @@
 
 128K   Should send 40000000 but actual 32038200
 
-16M    Should send 40000000 but actual 35857919
-8M     Should send 40000000 but actual 36389193
+16M             Should send 40000000 but actual 35857919
+8M              Should send 40000000 but actual 36389193
+注掉gc，8M       Should send 40000000 but actual 35742021

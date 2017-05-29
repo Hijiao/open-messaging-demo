@@ -5,7 +5,6 @@ import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.*;
 
 /**
  * Created by Max on 2017/5/23.
@@ -21,22 +20,15 @@ public class PageCacheManager {
     }
 
 
-
-
-
-
     private int currPageNumber = 0;
     private MappedByteBuffer lastPage;
     MappedByteBuffer currPage;
     int currPageRemaining;
 
 
-
-
-
     public void writeByte(byte[] body) {
         if (lastPage == null) {
-            lastPage = createNewPageToWirte(0);
+            lastPage = createNewPageToWrite(0);
         }
         currPageRemaining = lastPage.remaining();
         if (currPageRemaining < body.length) {
@@ -47,7 +39,7 @@ public class PageCacheManager {
             lastPage.put(body, 0, currPageRemaining);
             //flushAndCloseLastPage();
 
-            lastPage = createNewPageToWirte(++currPageNumber);
+            lastPage = createNewPageToWrite(++currPageNumber);
             for (int i = currPageRemaining; i < body.length; i++) {
                 lastPage.put(body[i]);
             }
@@ -70,18 +62,16 @@ public class PageCacheManager {
         currPageRemaining = currPage.remaining();
         if (currPageRemaining < messageLen) {
             for (int l = 0; l < currPageRemaining; l++) {
-                try {
-                    body[l] = currPage.get();
-                } catch (Exception e) {
-                    System.out.println(e);
-                }
+                body[l] = currPage.get();
 
             }
             currPage = createNewPageToRead(++currPageNumber);
             for (int l = currPageRemaining; l < messageLen; l++) {
                 body[l] = currPage.get();
             }
-        } else {
+        } else
+
+        {
             for (int l = 0; l < messageLen; l++) {
                 body[l] = currPage.get();
             }
@@ -90,7 +80,7 @@ public class PageCacheManager {
     }
 
 
-    private MappedByteBuffer createNewPageToWirte(int index) {
+    private MappedByteBuffer createNewPageToWrite(int index) {
         StringBuffer buffer = new StringBuffer();
         buffer.append(storePath).append(File.separator).append(bucket).append("_").append(String.format("%03d", index));
         try {
