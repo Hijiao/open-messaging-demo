@@ -27,25 +27,30 @@ public class PageCacheManager {
 
 
     public void writeByte(byte[] body) {
+
         if (lastPage == null) {
             lastPage = createNewPageToWrite(0);
         }
         currPageRemaining = lastPage.remaining();
-        if (currPageRemaining < body.length) {
+        int bodyAndIndexLenth = body.length + 4;
+        if (currPageRemaining < bodyAndIndexLenth) {
+            byte[] bodyAndIndex = packageBody(body, bodyAndIndexLenth);
             for (int i = 0; i < currPageRemaining; i++) {
-                lastPage.put(body[i]);
+                lastPage.put(bodyAndIndex[i]);
             }
-
-            lastPage.put(body, 0, currPageRemaining);
-            //flushAndCloseLastPage();
-
+            flushAndCloseLastPage();
             lastPage = createNewPageToWrite(++currPageNumber);
-            for (int i = currPageRemaining; i < body.length; i++) {
-                lastPage.put(body[i]);
+            for (int i = currPageRemaining; i < bodyAndIndexLenth; i++) {
+                lastPage.put(bodyAndIndex[i]);
             }
             //for (int i =0;i<len;++i)
             //tarByteArray=lastPage.get();
         } else {
+            byte[] index = intToByteArray(body.length);
+            lastPage.put(index[0]);
+            lastPage.put(index[1]);
+            lastPage.put(index[2]);
+            lastPage.put(index[3]);
             for (int i = 0; i < body.length; i++) {
                 lastPage.put(body[i]);
             }
@@ -53,25 +58,42 @@ public class PageCacheManager {
 
     }
 
-    public byte[] readByte(int messageLen) {
+    byte[] indexByte = new byte[4];
+
+    public byte[] readByte() {
         if (currPage == null) {
             currPage = createNewPageToRead(0);
         }
+        currPageRemaining = currPage.remaining();
 
+        if (currPageRemaining <= 4) {
+            for (int i = 0; i < currPageRemaining; i++)
+                indexByte[i] = currPage.get();
+            currPage = createNewPageToRead(++currPageNumber);
+            for (int i = currPageRemaining; i < 4; i++) {
+                indexByte[i] = currPage.get();
+            }
+        } else {
+            for (int i = 0; i < 4; i++) {
+                indexByte[i] = currPage.get();
+            }
+        }
+
+        int messageLen = byteArrayToInt(indexByte);
+        if (messageLen == 0) {
+            return null;
+        }
         byte[] body = new byte[messageLen];
         currPageRemaining = currPage.remaining();
         if (currPageRemaining < messageLen) {
-            for (int l = 0; l < currPageRemaining; l++) {
-                body[l] = currPage.get();
-
+            for (int i = 0; i < currPageRemaining; i++) {
+                body[i] = currPage.get();
             }
             currPage = createNewPageToRead(++currPageNumber);
             for (int l = currPageRemaining; l < messageLen; l++) {
                 body[l] = currPage.get();
             }
-        } else
-
-        {
+        } else {
             for (int l = 0; l < messageLen; l++) {
                 body[l] = currPage.get();
             }
@@ -121,15 +143,44 @@ public class PageCacheManager {
         }
     }
 
+    public static int byteArrayToInt(byte[] b) {
+        return b[3] & 0xFF |
+                (b[2] & 0xFF) << 8 |
+                (b[1] & 0xFF) << 16 |
+                (b[0] & 0xFF) << 24;
+    }
+
+    public static byte[] intToByteArray(int a) {
+        return new byte[]{
+                (byte) ((a >> 24) & 0xFF),
+                (byte) ((a >> 16) & 0xFF),
+                (byte) ((a >> 8) & 0xFF),
+                (byte) (a & 0xFF)
+        };
+    }
+
+    public static byte[] packageBody(byte[] body, int bodyAndIndexLenth) {
+        byte[] newBody = new byte[bodyAndIndexLenth];
+        int a = body.length;
+        newBody[0] = (byte) ((a >> 24) & 0xFF);
+        newBody[1] = (byte) ((a >> 16) & 0xFF);
+        newBody[2] = (byte) ((a >> 8) & 0xFF);
+
+        newBody[3] = (byte) (a & 0xFF);
+        for (int i = 0; i < a; a++) {
+            newBody[i + 4] = body[i];
+        }
+        return newBody;
+
+    }
+
 
     public static void main(String[] args) {
 
-        File commitLogFileHolder = new File("/Users/Max/code/tianchi/tmp/");
-        File[] commitLogFiles = commitLogFileHolder.listFiles();
-        for (File file : commitLogFiles) {
-            System.out.println(file.getName());
-        }
-        System.out.println(commitLogFiles.length);
+        int int2 = 199999991;
+        byte[] bytesInt = intToByteArray(int2);
+        System.out.println("bytesInt=" + bytesInt);//bytesInt=[B@de6ced
+        System.out.println("int ->byte len:" + bytesInt.length);
     }
 
 }

@@ -8,7 +8,7 @@ import java.util.List;
 import org.junit.Assert;
 
 public class DemoTester {
-    private static final int MESSAGE_LENGTH = 100;
+    private static final int MESSAGE_LENGTH = 10;
 
     public static void main(String[] args) {
         KeyValue properties = new DefaultKeyValue();
@@ -54,7 +54,11 @@ public class DemoTester {
         //show all data in file store
         MessageFileStore fileStore = MessageFileStore.getInstance();
         fileStore.showAllBuckets();
-
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         //请保证数据写入磁盘中
 
         //消费样例1，实际测试时会Kill掉发送进程，另取进程进行消费
@@ -68,9 +72,11 @@ public class DemoTester {
             while (true) {
                 Message message = consumer1.poll();
                 if (message == null) {
+                    System.out.println("null consume message");
                     //拉取为null则认为消息已经拉取完毕
                     break;
                 }
+                System.out.println("consume -->" + new String(((BytesMessage) message).getBody()));
                 String topic = message.headers().getString(MessageHeader.TOPIC);
                 String queue = message.headers().getString(MessageHeader.QUEUE);
                 //实际测试时，会一一比较各个字段
@@ -109,7 +115,7 @@ public class DemoTester {
                     //拉取为null则认为消息已经拉取完毕
                     break;
                 }
-
+                System.out.println("consume -->" + new String(((BytesMessage) message).getBody()));
                 String topic = message.headers().getString(MessageHeader.TOPIC);
                 String queue = message.headers().getString(MessageHeader.QUEUE);
                 //实际测试时，会一一比较各个字段

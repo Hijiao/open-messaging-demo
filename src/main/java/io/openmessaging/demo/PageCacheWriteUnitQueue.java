@@ -18,7 +18,6 @@ public class PageCacheWriteUnitQueue extends Thread {
 
 
     public void productWriteBody(byte[] body) throws InterruptedException {
-
             queue.put(body);
 
     }

@@ -9,13 +9,17 @@ import io.openmessaging.MessageHeader;
 import io.openmessaging.Producer;
 import io.openmessaging.Promise;
 
-public class DefaultProducer  implements Producer {
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+
+public class DefaultProducer implements Producer {
 
     private MessageFactory messageFactory = new DefaultMessageFactory();
     //    private MessageStore messageStore =MessageStore.getInstance();
     private MessageFileStore messageStore = MessageFileStore.getInstance();
 
     private PageCacheWriteUnitQueueManager queueManager = PageCacheWriteUnitQueueManager.getInstance();
+    private static final ThreadPoolExecutor executor = PageCacheWritePoolManager.getThreadPool();
 
 
     private KeyValue properties;
@@ -29,27 +33,33 @@ public class DefaultProducer  implements Producer {
     }
 
 
-    @Override public BytesMessage createBytesMessageToTopic(String topic, byte[] body) {
+    @Override
+    public BytesMessage createBytesMessageToTopic(String topic, byte[] body) {
         return messageFactory.createBytesMessageToTopic(topic, body);
     }
 
-    @Override public BytesMessage createBytesMessageToQueue(String queue, byte[] body) {
+    @Override
+    public BytesMessage createBytesMessageToQueue(String queue, byte[] body) {
         return messageFactory.createBytesMessageToQueue(queue, body);
     }
 
-    @Override public void start() {
+    @Override
+    public void start() {
 
     }
 
-    @Override public void shutdown() {
+    @Override
+    public void shutdown() {
 
     }
 
-    @Override public KeyValue properties() {
+    @Override
+    public KeyValue properties() {
         return properties;
     }
 
-    @Override public void send(Message message) {
+    @Override
+    public void send(Message message) {
         //if (message == null) throw new ClientOMSException("Message should not be null");
         String topic = message.headers().getString(MessageHeader.TOPIC);
         String queue = message.headers().getString(MessageHeader.QUEUE);
@@ -66,36 +76,48 @@ public class DefaultProducer  implements Producer {
 
     }
 
-    @Override public void send(Message message, KeyValue properties) {
+    @Override
+    public void send(Message message, KeyValue properties) {
         throw new UnsupportedOperationException("Unsupported");
     }
 
-    @Override public Promise<Void> sendAsync(Message message) {
+    @Override
+    public Promise<Void> sendAsync(Message message) {
         throw new UnsupportedOperationException("Unsupported");
     }
 
-    @Override public Promise<Void> sendAsync(Message message, KeyValue properties) {
+    @Override
+    public Promise<Void> sendAsync(Message message, KeyValue properties) {
         throw new UnsupportedOperationException("Unsupported");
     }
 
-    @Override public void sendOneway(Message message) {
+    @Override
+    public void sendOneway(Message message) {
         throw new UnsupportedOperationException("Unsupported");
     }
 
-    @Override public void sendOneway(Message message, KeyValue properties) {
+    @Override
+    public void sendOneway(Message message, KeyValue properties) {
         throw new UnsupportedOperationException("Unsupported");
     }
 
-    @Override public BatchToPartition createBatchToPartition(String partitionName) {
+    @Override
+    public BatchToPartition createBatchToPartition(String partitionName) {
         throw new UnsupportedOperationException("Unsupported");
     }
 
-    @Override public BatchToPartition createBatchToPartition(String partitionName, KeyValue properties) {
+    @Override
+    public BatchToPartition createBatchToPartition(String partitionName, KeyValue properties) {
         throw new UnsupportedOperationException("Unsupported");
     }
 
     @Override
     public void flush() {
-
+//        BlockingQueue<Runnable> queue=executor.getThreads();
+//
+//        for (Runnable r :queue){
+//            (PageCacheWriteUnitQueueManager)r.
+//        }
+        messageStore.flushWriteBuffers();
     }
 }

@@ -34,10 +34,10 @@ public class PageCacheWriteUnitQueueManager {
             if (queue == null) {
                 queue = new PageCacheWriteUnitQueue(isTopic);
                 bucketsWriteQueueMap.put(bucket, queue);
+                PageCacheWriteRunner runner = new PageCacheWriteRunner(bucketsWriteQueueMap.get(bucket), bucket, filePath);
+                executor.execute(runner);
             }
         }
-        PageCacheWriteRunner runner = new PageCacheWriteRunner(bucketsWriteQueueMap.get(bucket), bucket, filePath);
-        executor.execute(runner);
         return bucketsWriteQueueMap.get(bucket);
     }
 

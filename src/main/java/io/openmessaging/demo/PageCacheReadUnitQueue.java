@@ -1,6 +1,7 @@
 package io.openmessaging.demo;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Created by Max on 2017/5/26.
@@ -8,22 +9,32 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class PageCacheReadUnitQueue {
 
     private boolean isTopic;
+    private boolean isFinish = false;
 
     public PageCacheReadUnitQueue(boolean isTopic) {
         this.isTopic = isTopic;
     }
 
-    private ConcurrentLinkedQueue<byte[]> queue = new ConcurrentLinkedQueue();
+    private LinkedBlockingQueue<byte[]> queue = new LinkedBlockingQueue();
 
 
-    public void productReadBody(byte[] messageBody) {
-        queue.offer(messageBody);
+    public void productReadBody(byte[] messageBody) throws InterruptedException {
+        queue.put(messageBody);
+        // queue.offer(messageBody);
     }
 
-    public byte[] consumeReadBody() {
-        if (queue.isEmpty()) {
+    public byte[] consumeReadBody() throws InterruptedException {
+//        if (queue.isEmpty()) {
+//            return null;
+//        } else return queue.poll();
+        if (isFinish) {
             return null;
-        } else return queue.poll();
+        }
+        return queue.take();
+    }
+
+    public void setFinish(boolean finish) {
+        isFinish = finish;
     }
 
     public boolean isTopic() {

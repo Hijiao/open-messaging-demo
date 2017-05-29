@@ -28,18 +28,17 @@ public class DefaultPullConsumer implements PullConsumer {
 
 
     @Override
-    public synchronized Message poll() {
+    public Message poll() {
         if (buckets.size() == 0 || queue == null) {
             return null;
         }
-
-        Message message = messageStore.pullMessage(properties.getString("STORE_PATH"), false, queue);
+        Message message = messageStore.pullMessage(false, queue);
         if (message != null) {
             return message;
         }
 
         for (int i = 0; i < bucketList.size(); i++) {
-            message = messageStore.pullMessage(properties.getString("STORE_PATH"), true, bucketList.get(i));
+            message = messageStore.pullMessage(true, bucketList.get(i));
             if (message != null) {
                 return message;
             }

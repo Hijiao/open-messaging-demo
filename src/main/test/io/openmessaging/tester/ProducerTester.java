@@ -81,6 +81,11 @@ public class ProducerTester {
             }
         }
 
+        public void flush() {
+            producer.flush();
+
+        }
+
     }
 
     public static void main(String[] args) throws Exception {
@@ -95,6 +100,10 @@ public class ProducerTester {
         for (int i = 0; i < ts.length; i++) {
             ts[i].join();
         }
+        for (int i = 0; i < ts.length; i++) {
+            ((ProducerTask) ts[i]).flush();
+        }
+
         long end = System.currentTimeMillis();
         logger.info("Produce Finished, Cost {} ms", end - start);
     }
