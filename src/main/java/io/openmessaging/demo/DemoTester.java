@@ -53,7 +53,7 @@ public class DemoTester {
         long T1 = end - start;
         //show all data in file store
         MessageFileStore fileStore = MessageFileStore.getInstance();
-        fileStore.showAllBuckets();
+        //fileStore.showAllBuckets();
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {

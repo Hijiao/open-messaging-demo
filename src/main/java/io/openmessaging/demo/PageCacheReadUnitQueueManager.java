@@ -26,13 +26,13 @@ public class PageCacheReadUnitQueueManager {
 
 
     //使用：getBucketReadUnitQueue.consumeReadBody;
-    public PageCacheReadUnitQueue getBucketReadUnitQueue(List lenList, String bucket, boolean isTopic) {
+    public PageCacheReadUnitQueue getBucketReadUnitQueue(String bucket, boolean isTopic) {
         synchronized (bucketsReadQueueMap) {
             PageCacheReadUnitQueue queue = bucketsReadQueueMap.get(bucket);
             if (queue == null) {
                 queue = new PageCacheReadUnitQueue(isTopic);
                 bucketsReadQueueMap.put(bucket, queue);
-                PageCacheReadRunner runner = new PageCacheReadRunner(lenList, queue, bucket, filePath);
+                PageCacheReadRunner runner = new PageCacheReadRunner(queue, bucket, filePath);
                 ThreadPoolExecutor executor = PageCacheReadPoolManager.getThreadPool();
                 executor.execute(runner);
             }

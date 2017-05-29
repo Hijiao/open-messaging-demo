@@ -1,21 +1,16 @@
 package io.openmessaging.demo;
 
-import java.util.List;
 
 /**
  * Created by Max on 2017/5/28.
  */
 public class PageCacheReadRunner extends Thread {
     private PageCacheReadUnitQueue queue;
-    // String queueBucketName;
     private PageCacheManager cacheManager;
-    private List<Integer> lenList;
 
 
-    public PageCacheReadRunner(List lenList, PageCacheReadUnitQueue queue, String queueBucketName, String storePath) {
-        this.lenList = lenList;
+    public PageCacheReadRunner(PageCacheReadUnitQueue queue, String queueBucketName, String storePath) {
         this.queue = queue;
-        //this.queueBucketName = queueBucketName;
         this.cacheManager = new PageCacheManager(queueBucketName, storePath);
     }
 
