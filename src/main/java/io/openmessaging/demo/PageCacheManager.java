@@ -8,6 +8,8 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.Set;
 
@@ -84,7 +86,8 @@ public class PageCacheManager {
             for (int i = 0; i < currPageRemaining; i++) {
                 currPage.put(byteBuffer.get());
             }
-            closeCurrPage();
+            unmap(currPage);
+//            closeCurrPage();
             currPage = createNewPageToWrite(++currPageNumber);
             System.gc();
             for (int i = currPageRemaining; i < messageLen; i++) {
@@ -105,7 +108,8 @@ public class PageCacheManager {
             if (currPage.hasRemaining()) {
                 return currPage.get();
             } else {
-                closeCurrPage();
+                unmap(currPage);
+                // closeCurrPage();
                 currPage = createNewPageToRead(++currPageNumber);
                 System.gc();
             }
@@ -230,6 +234,34 @@ public class PageCacheManager {
             getCleanerMethod.setAccessible(true);
             sun.misc.Cleaner cleaner = (sun.misc.Cleaner) getCleanerMethod.invoke(currPage, new Object[0]);
             cleaner.clean();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void unmap(final MappedByteBuffer mappedByteBuffer) {
+        try {
+            if (mappedByteBuffer == null) {
+                return;
+            }
+            //mappedByteBuffer.force();
+            AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                @SuppressWarnings("restriction")
+                public Object run() {
+                    try {
+                        Method getCleanerMethod = mappedByteBuffer.getClass().getMethod("cleaner", new Class[0]);
+                        getCleanerMethod.setAccessible(true);
+                        sun.misc.Cleaner cleaner =
+                                (sun.misc.Cleaner) getCleanerMethod.invoke(mappedByteBuffer, new Object[0]);
+                        cleaner.clean();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                }
+            });
+
         } catch (Exception e) {
             e.printStackTrace();
         }
