@@ -12,6 +12,9 @@ public class Constants {
     //    public static final int PAGE_SIZE = 1 << PAGE_SIZE_BITE_COUNT; //8M  COUNT=23
     public static final int PAGE_SIZE = 1024 * 1024 * 512; //128M
 
+    public static final int SEND_TO_WRITE_QUEUE_BATCH_SIZE = 10240;
+
+
     public static final int offsetCounterpart = PAGE_SIZE - 1;
 
 
@@ -20,8 +23,6 @@ public class Constants {
     public static final int PAGE_CACHE_WRITE_MAX_POOL_SIZE = 120;//最大线程数
 
     public static final int PAGE_CACHE_WRITE_KEEP_ALIVE_TIME = 60; //60s
-
-    public static final int SEND_TO_WRITE_QUEUE_BATCH_SIZE = 10240;
 
     public static final byte MARKER_PREFIX = '#';
 

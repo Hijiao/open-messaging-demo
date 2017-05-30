@@ -34,9 +34,9 @@ public class PageCacheReadUnitQueueManager {
                 queue = new PageCacheReadUnitQueue(bucket, isTopic);
                 bucketsReadQueueMap.put(bucket, queue);
                 PageCacheReadRunner runner = new PageCacheReadRunner(queue, bucket, filePath);
-                //runner.start();
-                ThreadPoolExecutor executor = PageCacheReadPoolManager.getThreadPool();
-                executor.execute(runner);
+                runner.start();
+//                ThreadPoolExecutor executor = PageCacheReadPoolManager.getThreadPool();
+//                executor.execute(runner);
             }
             return queue;
 

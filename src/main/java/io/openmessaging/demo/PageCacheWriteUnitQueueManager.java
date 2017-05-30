@@ -25,7 +25,7 @@ public class PageCacheWriteUnitQueueManager {
     //    private static final Map<String, PageCacheWriteUnitQueue> bucketsWriteQueueMap = new ConcurrentHashMap<>();
     private static final Map<String, PageCacheWriteUnitQueue> bucketsWriteQueueMap = new HashMap<>();
 
-    private static final ThreadPoolExecutor executor = PageCacheWritePoolManager.getThreadPool();
+//    private static final ThreadPoolExecutor executor = PageCacheWritePoolManager.getThreadPool();
 
     //使用： getBucketWriteQueue().productWriteUnit(writeUnit);
     public PageCacheWriteUnitQueue getBucketWriteQueue(String bucket, boolean isTopic) {
@@ -35,7 +35,7 @@ public class PageCacheWriteUnitQueueManager {
                 queue = new PageCacheWriteUnitQueue(isTopic);
                 bucketsWriteQueueMap.put(bucket, queue);
                 PageCacheWriteRunner runner = new PageCacheWriteRunner(bucketsWriteQueueMap.get(bucket), bucket, filePath);
-                executor.execute(runner);
+                runner.start();
             }
         }
         return bucketsWriteQueueMap.get(bucket);

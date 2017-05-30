@@ -9,20 +9,20 @@ import java.util.concurrent.TimeUnit;
  */
 public class PageCacheWritePoolManager {
 
-    private static ThreadPoolExecutor threadPool = null;
-
-    public static ThreadPoolExecutor getThreadPool() {
-        if (threadPool == null) {
-            threadPool = new ThreadPoolExecutor(
-                    Constants.PAGE_CACHE_WRITE_CORE_POOL_SIZE,
-                    Constants.PAGE_CACHE_WRITE_MAX_POOL_SIZE,
-                    Constants.PAGE_CACHE_WRITE_KEEP_ALIVE_TIME,
-                    TimeUnit.MILLISECONDS,
-                    new ArrayBlockingQueue<Runnable>(128),
-                    new ThreadPoolExecutor.DiscardOldestPolicy());
-        }
-        return threadPool;
-    }
+//    private static ThreadPoolExecutor threadPool = null;
+//
+//    public static ThreadPoolExecutor getThreadPool() {
+//        if (threadPool == null) {
+//            threadPool = new ThreadPoolExecutor(
+//                    Constants.PAGE_CACHE_WRITE_CORE_POOL_SIZE,
+//                    Constants.PAGE_CACHE_WRITE_MAX_POOL_SIZE,
+//                    Constants.PAGE_CACHE_WRITE_KEEP_ALIVE_TIME,
+//                    TimeUnit.MILLISECONDS,
+//                    new ArrayBlockingQueue<Runnable>(128),
+//                    new ThreadPoolExecutor.DiscardOldestPolicy());
+//        }
+//        return threadPool;
+//    }
 
     //TODO get the process queue and shutdown them
     //return threadPool.getQueue();

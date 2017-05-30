@@ -45,7 +45,6 @@ public class PageCacheManager {
     Set<Map.Entry<String, Object>> entrySet;
 
     public void writeMessage(DefaultBytesMessage message) {
-        System.out.println("write:" + message);
         byteBuffer.clear();
         if (currPage == null) {
             currPage = createNewPageToWrite(++currPageNumber);
