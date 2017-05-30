@@ -2,24 +2,16 @@ package io.openmessaging.tester;
 
 import io.openmessaging.BytesMessage;
 import io.openmessaging.KeyValue;
-import io.openmessaging.Message;
 import io.openmessaging.MessageHeader;
-import io.openmessaging.Producer;
 import io.openmessaging.PullConsumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Created by Max on 2017/5/26.
@@ -91,7 +83,7 @@ public class ConsumerTester {
                         throw new Exception("Queue or Topic name is empty");
                     }
                     String body = new String(message.getBody());
-                    System.out.println("----------------> " + Thread.currentThread().getName() + " : " + pullNum + "body--> " + body);
+                    // System.out.println("----------------> " + Thread.currentThread().getName() + " : " + pullNum + "body--> " + body);
                     int index = body.lastIndexOf("_");
                     String producer = body.substring(0, index);
                     int offset = Integer.parseInt(body.substring(index + 1));

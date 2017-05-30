@@ -3,14 +3,13 @@ package io.openmessaging.tester;
 import io.openmessaging.KeyValue;
 import io.openmessaging.Message;
 import io.openmessaging.Producer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Created by Max on 2017/5/26.
@@ -106,6 +105,6 @@ public class ProducerTester {
         }
 
         long end = System.currentTimeMillis();
-        logger.info("Produce Finished, Cost {} ms", end - start);
+        logger.info("Produce Finished, Cost {} ms,tps {}", end - start, Constants.PRO_MAX / (end - start));
     }
 }

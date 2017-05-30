@@ -8,9 +8,6 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,17 +22,19 @@ public class PageCacheManager {
 
     private String storePath;
     private String bucket;
+    private boolean isTopic;
 
-    public PageCacheManager(String bucket, String storePath) {
+    public PageCacheManager(String bucket, String storePath, boolean isTopic) {
         this.bucket = bucket;
         this.storePath = storePath;
+        this.isTopic = isTopic;
     }
 
     private ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1024 * 300);//消息大小最大256kb
 
 
     private int currPageNumber = -1;
-    private MappedByteBuffer currPage;
+    MappedByteBuffer currPage = null;
     int currPageRemaining;
 
 
@@ -87,6 +86,7 @@ public class PageCacheManager {
             }
             closeCurrPage();
             currPage = createNewPageToWrite(++currPageNumber);
+            System.gc();
             for (int i = currPageRemaining; i < messageLen; i++) {
                 currPage.put(byteBuffer.get());
             }
@@ -107,6 +107,7 @@ public class PageCacheManager {
             } else {
                 closeCurrPage();
                 currPage = createNewPageToRead(++currPageNumber);
+                System.gc();
             }
         }
         if (currPage == null)
@@ -189,97 +190,15 @@ public class PageCacheManager {
         return null;
     }
 
-    public void writeByte(byte[] body) {
-
-        if (currPage == null) {
-            currPage = createNewPageToWrite(++currPageNumber);
-        }
-        currPageRemaining = currPage.remaining();
-        int bodyAndIndexLenth = body.length + 4;
-        if (currPageRemaining < bodyAndIndexLenth) {
-            byte[] bodyAndIndex = packageBody(body, bodyAndIndexLenth);
-            for (int i = 0; i < currPageRemaining; i++) {
-                currPage.put(bodyAndIndex[i]);
-            }
-            closeCurrPage();
-            currPage = createNewPageToWrite(++currPageNumber);
-            for (int i = currPageRemaining; i < bodyAndIndexLenth; i++) {
-                currPage.put(bodyAndIndex[i]);
-            }
-            //for (int i =0;i<len;++i)
-            //tarByteArray=currPage.get();
-        } else {
-            byte[] index = intToByteArray(body.length);
-            currPage.put(index[0]);
-            currPage.put(index[1]);
-            currPage.put(index[2]);
-            currPage.put(index[3]);
-            for (int i = 0; i < body.length; i++) {
-                currPage.put(body[i]);
-            }
-        }
-
-    }
-
-    byte[] indexByte = new byte[4];
-
-    public byte[] readByte() {
-        if (currPage == null && currPageNumber == -1) {
-            currPage = createNewPageToRead(++currPageNumber);
-        }
-        if (currPage == null) {
-            return null;
-        }
-        currPageRemaining = currPage.remaining();
-
-        if (currPageRemaining <= 4) {
-            for (int i = 0; i < currPageRemaining; i++)
-                indexByte[i] = currPage.get();
-            currPage = createNewPageToRead(++currPageNumber);
-            if (currPage == null) {
-                return null;
-            }
-            for (int i = currPageRemaining; i < 4; i++) {
-                indexByte[i] = currPage.get();
-            }
-        } else {
-            for (int i = 0; i < 4; i++) {
-                indexByte[i] = currPage.get();
-            }
-        }
-
-        int messageLen = byteArrayToInt(indexByte);
-        if (messageLen == 0) {
-            return null;
-        }
-        byte[] body = new byte[messageLen];
-        currPageRemaining = currPage.remaining();
-        if (currPageRemaining < messageLen) {
-            for (int i = 0; i < currPageRemaining; i++) {
-                body[i] = currPage.get();
-            }
-            currPage = createNewPageToRead(++currPageNumber);
-            if (currPage == null) {
-                return null;
-            }
-            for (int l = currPageRemaining; l < messageLen; l++) {
-                body[l] = currPage.get();
-            }
-        } else {
-            for (int l = 0; l < messageLen; l++) {
-                body[l] = currPage.get();
-            }
-        }
-        return body;
-    }
-
 
     private MappedByteBuffer createNewPageToWrite(int index) {
+        int pageSize = (isTopic ? BIG_WRITE_PAGE_SIZE : SMALL_WRITE_PAGE_SIZE);
+
         StringBuilder builder = new StringBuilder();
         builder.append(storePath).append(File.separator).append(bucket).append("_").append(String.format("%03d", index));
         try {
             RandomAccessFile randAccessFile = new RandomAccessFile(new File(builder.toString()), "rw");
-            MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_WRITE, 0, Constants.PAGE_SIZE);
+            MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_WRITE, 0, pageSize);
             return newPage;
         } catch (Exception e) {
             e.printStackTrace();
@@ -289,10 +208,11 @@ public class PageCacheManager {
 
     private MappedByteBuffer createNewPageToRead(int index) {
         StringBuilder builder = new StringBuilder();
+        int pageSize = (isTopic ? BIG_WRITE_PAGE_SIZE : SMALL_WRITE_PAGE_SIZE);
         builder.append(storePath).append(File.separator).append(bucket).append("_").append(String.format("%03d", index));
         try {
             RandomAccessFile randAccessFile = new RandomAccessFile(new File(builder.toString()), "r");
-            MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, Constants.PAGE_SIZE);
+            MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, pageSize);
             return newPage;
         } catch (Exception e) {
             //e.printStackTrace();
@@ -305,90 +225,16 @@ public class PageCacheManager {
         try {
 //            MappedByteBuffer page = bucketPageList.getLast();
 //            page.force();
+
             Method getCleanerMethod = currPage.getClass().getMethod("cleaner", new Class[0]);
             getCleanerMethod.setAccessible(true);
             sun.misc.Cleaner cleaner = (sun.misc.Cleaner) getCleanerMethod.invoke(currPage, new Object[0]);
             cleaner.clean();
-            System.gc();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public static int byteArrayToInt(byte[] b) {
-        return b[3] & 0xFF |
-                (b[2] & 0xFF) << 8 |
-                (b[1] & 0xFF) << 16 |
-                (b[0] & 0xFF) << 24;
-    }
-
-    public static byte[] intToByteArray(int a) {
-        return new byte[]{
-                (byte) ((a >> 24) & 0xFF),
-                (byte) ((a >> 16) & 0xFF),
-                (byte) ((a >> 8) & 0xFF),
-                (byte) (a & 0xFF)
-        };
-    }
-
-    public static byte[] packageBody(byte[] body, int bodyAndIndexLenth) {
-        byte[] newBody = new byte[bodyAndIndexLenth];
-        int a = body.length;
-        newBody[0] = (byte) ((a >> 24) & 0xFF);
-        newBody[1] = (byte) ((a >> 16) & 0xFF);
-        newBody[2] = (byte) ((a >> 8) & 0xFF);
-
-        newBody[3] = (byte) (a & 0xFF);
-        for (int i = 0; i < a; a++) {
-            newBody[i + 4] = body[i];
-        }
-        return newBody;
-
-    }
-
-    private static String decoder(ByteBuffer buffer) {
-        Charset charset = Charset.forName("US-ASCII");
-        CharsetDecoder decoder = charset.newDecoder();
-        try {
-            return decoder.decode(buffer).toString();
-        } catch (CharacterCodingException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-
-    public static void main(String[] args) {
-        ByteBuffer byteBuffer = ByteBuffer.allocate(10);
-        String s = "abcdef";
-        byte[] bytes = new byte[]{'a', 'b', 'c', 'd', 'e', 0};
-        byteBuffer.put(s.getBytes(Charset.forName("US-ASCII")));
-        byte[] out = new byte[6];
-        System.out.println("byteBuffer pos:" + byteBuffer.position());
-        System.out.println("byteBuffer remaining Size:" + byteBuffer.remaining());
-        // byteBuffer.flip();
-        System.out.println("byteBuffer pos:" + byteBuffer.position());
-
-        System.out.println("byteBuffer  remaining Size:" + byteBuffer.remaining());
-
-//        StringBuilder
-//        StringBuilder builder=new StringBuilder("UTF-8");
-        StringBuffer buffer = new StringBuffer();
-        for (int i = 0; i < byteBuffer.position(); i++) {
-            buffer.append(byteBuffer.get(i));
-        }
-
-
-//        System.out.println(new String(out));
-//        String b=decoder(byteBuffer);
-//        System.out.println(b);
-        System.out.println(buffer.toString());
-        byte nullb = byteBuffer.get(7);
-        System.out.println(nullb == 0);
-        System.out.println();
-
-
-    }
 
 }
 

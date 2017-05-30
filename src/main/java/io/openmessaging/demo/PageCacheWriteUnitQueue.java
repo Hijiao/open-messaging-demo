@@ -5,7 +5,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 /**
  * Created by Max on 2017/5/23.
  */
-public class PageCacheWriteUnitQueue extends Thread {
+public class PageCacheWriteUnitQueue {
 
     public PageCacheWriteUnitQueue(boolean isTopic) {
         this.isTopic = isTopic;
@@ -18,11 +18,14 @@ public class PageCacheWriteUnitQueue extends Thread {
 
     public void putMessageInWriteQueue(DefaultBytesMessage message) throws InterruptedException {
         queue.put(message);
-
+        // queue.offer(message);
     }
 
     public DefaultBytesMessage getMessageFromWriteQueue() throws InterruptedException {
-            return queue.take();
+        return queue.take();
+//        while (queue.isEmpty()) {
+//        }
+//        return queue.poll();
     }
 
     public boolean isTopic() {
