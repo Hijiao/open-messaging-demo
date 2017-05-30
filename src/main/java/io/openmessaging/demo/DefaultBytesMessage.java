@@ -16,6 +16,10 @@ public class DefaultBytesMessage implements BytesMessage {
         this.body = body;
     }
 
+    public DefaultBytesMessage() {
+        this.body = body;
+    }
+
     @Override
     public byte[] getBody() {
         return body;

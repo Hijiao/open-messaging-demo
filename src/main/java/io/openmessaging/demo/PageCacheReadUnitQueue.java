@@ -1,5 +1,9 @@
 package io.openmessaging.demo;
 
+import io.openmessaging.Message;
+import io.openmessaging.MessageHeader;
+import sun.dc.pr.PRError;
+
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -10,20 +14,22 @@ public class PageCacheReadUnitQueue {
 
     private boolean isTopic;
     private boolean isFinish = false;
+    private String bucketName;
 
-    public PageCacheReadUnitQueue(boolean isTopic) {
+    public PageCacheReadUnitQueue(String bucketName, boolean isTopic) {
         this.isTopic = isTopic;
+        this.bucketName = bucketName;
     }
 
-    private LinkedBlockingQueue<byte[]> queue = new LinkedBlockingQueue();
+    private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue();
 
 
-    public void productReadBody(byte[] messageBody) throws InterruptedException {
-        queue.put(messageBody);
+    public void productReadBody(DefaultBytesMessage message) throws InterruptedException {
+        queue.put(message);
         // queue.offer(messageBody);
     }
 
-    public byte[] consumeReadBody() throws InterruptedException {
+    public DefaultBytesMessage consumeReadBody() throws InterruptedException {
 //        if (queue.isEmpty()) {
 //            return null;
 //        } else return queue.poll();
@@ -37,9 +43,13 @@ public class PageCacheReadUnitQueue {
                 return null;
             }
         }
-
-//        return queue.take();
-        return queue.poll();
+        DefaultBytesMessage message = queue.poll();
+        if (isTopic) {
+            message.putHeaders(MessageHeader.TOPIC, bucketName);
+        } else {
+            message.putHeaders(MessageHeader.QUEUE, bucketName);
+        }
+        return message;
     }
 
     public void setFinish(boolean finish) {

@@ -21,7 +21,7 @@ public class PageCacheWriteRunner extends Thread {
     public void run() {
         try {
             while (true) {
-                cacheManager.writeByte(queue.consumeWriteBody());
+                cacheManager.writeMessage(queue.getMessageFromWriteQueue());
             }
         } catch (InterruptedException e) {
             e.printStackTrace();

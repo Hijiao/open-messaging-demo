@@ -18,10 +18,10 @@ public class PageCacheReadRunner extends Thread {
 
     public void run() {
         try {
-            byte[] body = cacheManager.readByte();
-            while (body != null) {
-                queue.productReadBody(body);
-                body = cacheManager.readByte();
+            DefaultBytesMessage message = cacheManager.readMessage();
+            while (message != null) {
+                queue.productReadBody(message);
+                message = cacheManager.readMessage();
             }
             queue.setFinish(true);
         } catch (InterruptedException e) {

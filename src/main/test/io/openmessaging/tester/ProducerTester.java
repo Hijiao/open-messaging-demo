@@ -63,6 +63,7 @@ public class ProducerTester {
                     String queueOrTopic;
                     if (sendNum % 10 == 0) {
                         queueOrTopic = "QUEUE_" + random.nextInt(10);
+                        //queueOrTopic = "QUEUE_" + random.nextInt(10);
                     } else {
                         queueOrTopic = "TOPIC_" + random.nextInt(10);
                     }

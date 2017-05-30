@@ -14,15 +14,15 @@ public class PageCacheWriteUnitQueue extends Thread {
 
     private boolean isTopic;
 
-    private LinkedBlockingQueue<byte[]> queue = new LinkedBlockingQueue<>();
+    private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue<>();
 
 
-    public void productWriteBody(byte[] body) throws InterruptedException {
-            queue.put(body);
+    public void putMessageInWriteQueue(DefaultBytesMessage message) throws InterruptedException {
+        queue.put(message);
 
     }
 
-    public byte[] consumeWriteBody() throws InterruptedException {
+    public DefaultBytesMessage getMessageFromWriteQueue() throws InterruptedException {
             return queue.take();
     }
 

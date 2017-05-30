@@ -60,30 +60,30 @@ public class DefaultProducer implements Producer {
 
     @Override
     public void send(Message message) {
-        if (message.headers().keySet().size() != 1 & header_count < 100) {
-            ++header_count;
-//            System.out.println("-------------------");
-
-
-            if (message.headers().getString(MessageHeader.TOPIC) != null) {
-                System.out.println(message.headers().getString(MessageHeader.TOPIC) + ":hea-> " + message.headers().toString());
-            } else {
-                System.out.println(message.headers().getString(MessageHeader.QUEUE) + ":hea->" + message.headers().toString());
-            }
-
-        }
-
-        if (message.properties() != null & pro_count < 100) {
-            ++pro_count;
-//            System.out.println("-------------------");
-            if (message.headers().getString(MessageHeader.TOPIC) != null) {
-                System.out.println(message.headers().getString(MessageHeader.TOPIC) + ":pro-> " + message.properties().toString());
-            } else {
-                System.out.println(message.headers().getString(MessageHeader.QUEUE) + ":pro-> " + message.properties().toString());
-
-            }
-
-        }
+//        if (message.headers().keySet().size() != 1 & header_count < 100) {
+//            ++header_count;
+////            System.out.println("-------------------");
+//
+//
+//            if (message.headers().getString(MessageHeader.TOPIC) != null) {
+//                System.out.println(message.headers().getString(MessageHeader.TOPIC) + ":hea-> " + message.headers().toString());
+//            } else {
+//                System.out.println(message.headers().getString(MessageHeader.QUEUE) + ":hea->" + message.headers().toString());
+//            }
+//
+//        }
+//
+//        if (message.properties() != null & pro_count < 100) {
+//            ++pro_count;
+////            System.out.println("-------------------");
+//            if (message.headers().getString(MessageHeader.TOPIC) != null) {
+//                System.out.println(message.headers().getString(MessageHeader.TOPIC) + ":pro-> " + message.properties().toString());
+//            } else {
+//                System.out.println(message.headers().getString(MessageHeader.QUEUE) + ":pro-> " + message.properties().toString());
+//
+//            }
+//
+//        }
 
         //if (message == null) throw new ClientOMSException("Message should not be null");
         String topic = message.headers().getString(MessageHeader.TOPIC);

@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory;
  */
 public class MessageFileStore {
 
-    static Logger logger = LoggerFactory.getLogger(MessageFileStore.class);
     private static final MessageFileStore INSTANCE = new MessageFileStore();
 
     public static MessageFileStore getInstance() {
@@ -23,13 +22,12 @@ public class MessageFileStore {
     }
 
 
-    private Map<String, List<byte[]>> beforeWriteBody = new ConcurrentHashMap<>();
+    private Map<String, List<DefaultBytesMessage>> beforeWriteBody = new ConcurrentHashMap<>();
 
     private PageCacheWriteUnitQueueManager writeQueueManager = PageCacheWriteUnitQueueManager.getInstance();
     private PageCacheReadUnitQueueManager readUnitQueueManager = PageCacheReadUnitQueueManager.getInstance();
 
 
-    DefaultProducer producer = new DefaultProducer();
 
     public void putMessage(boolean isTopic, String bucket, Message message) {
         synchronized (beforeWriteBody) {
@@ -38,15 +36,14 @@ public class MessageFileStore {
             }
         }
 
-        allocateOnFileTableAndSendToWriteQueue(isTopic, bucket, (BytesMessage) message);
+        allocateOnFileTableAndSendToWriteQueue(isTopic, bucket, (DefaultBytesMessage) message);
     }
 
 
-    public void allocateOnFileTableAndSendToWriteQueue(boolean isTopic, String bucket, BytesMessage message) {
-        List<byte[]> beforeWriteBodyList = beforeWriteBody.get(bucket);
-
+    public void allocateOnFileTableAndSendToWriteQueue(boolean isTopic, String bucket, DefaultBytesMessage message) {
+        List<DefaultBytesMessage> beforeWriteBodyList = beforeWriteBody.get(bucket);
         synchronized (beforeWriteBodyList) {
-            beforeWriteBodyList.add(message.getBody());
+            beforeWriteBodyList.add(message);
             if (beforeWriteBodyList.size() > Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE) {
                 PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket, isTopic);
                 sendBatchMessageToQueue(beforeWriteBodyList, queue);
@@ -55,11 +52,11 @@ public class MessageFileStore {
 
     }
 
-    private void sendBatchMessageToQueue(List<byte[]> beforeWriteBodyList, PageCacheWriteUnitQueue queue) {
+    private void sendBatchMessageToQueue(List<DefaultBytesMessage> beforeWriteBodyList, PageCacheWriteUnitQueue queue) {
         try {
             for (int i = 0; i < beforeWriteBodyList.size(); i++) {
-                byte[] body = beforeWriteBodyList.get(i);
-                queue.productWriteBody(body);
+                DefaultBytesMessage message = beforeWriteBodyList.get(i);
+                queue.putMessageInWriteQueue(message);
             }
             beforeWriteBodyList.clear();
         } catch (InterruptedException e) {
@@ -68,29 +65,21 @@ public class MessageFileStore {
     }
 
 
-
     public Message pullMessage(boolean isTopic, String bucket) {
         PageCacheReadUnitQueue readUnitQueue = readUnitQueueManager.getBucketReadUnitQueue(bucket, isTopic);
-        byte[] body = null;
+        DefaultBytesMessage message = null;
         try {
-            body = readUnitQueue.consumeReadBody();
+            message = readUnitQueue.consumeReadBody();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        if (body == null) {
-            return null;
-        } else {
-            if (readUnitQueue.isTopic()) {
-                return producer.createBytesMessageToTopic(bucket, body);
-            }
-            return producer.createBytesMessageToQueue(bucket, body);
-        }
+        return message;
     }
 
     public synchronized void flushWriteBuffers() {
-        for (Map.Entry<String, List<byte[]>> entry : beforeWriteBody.entrySet()) {
+        for (Map.Entry<String, List<DefaultBytesMessage>> entry : beforeWriteBody.entrySet()) {
             //System.out.println("bucket:====== " + entry.getKey());
-            List<byte[]> beforeWriteBodyList = entry.getValue();
+            List<DefaultBytesMessage> beforeWriteBodyList = entry.getValue();
             if (beforeWriteBodyList.isEmpty()) continue;
             PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(entry.getKey(), true);
             sendBatchMessageToQueue(beforeWriteBodyList, queue);

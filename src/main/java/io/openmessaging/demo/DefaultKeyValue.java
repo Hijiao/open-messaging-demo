@@ -11,6 +11,7 @@ public class DefaultKeyValue implements KeyValue {
 
     private final Map<String, Object> kvs = new HashMap<>();
 
+
     @Override
     public KeyValue put(String key, int value) {
         kvs.put(key, value);
@@ -60,6 +61,10 @@ public class DefaultKeyValue implements KeyValue {
         return kvs.keySet();
     }
 
+    public Map getMap() {
+        return kvs;
+    }
+
     @Override
     public boolean containsKey(String key) {
         return kvs.containsKey(key);
@@ -73,6 +78,8 @@ public class DefaultKeyValue implements KeyValue {
             return "";
 
         StringBuilder sb = new StringBuilder();
+
+
         for (; ; ) {
             Map.Entry<String, Object> e = i.next();
             String key = e.getKey();
@@ -84,5 +91,46 @@ public class DefaultKeyValue implements KeyValue {
                 return sb.toString();
             sb.append(',');
         }
+    }
+
+    public static void main(String[] args) {
+        byte b = 's';
+        long start = System.currentTimeMillis();
+        byte[] test = new byte[2000000000];
+        for (int i = 0; i < 2000000000; i++) {
+            test[i] = (byte) i;
+        }
+        long end1 = System.currentTimeMillis();
+        System.out.println(end1 - start);
+
+        for (int i = 0; i < 2000000000; i++) {
+            //test[i]=(byte)i;
+            if (test[i] == 1) {
+
+            } else if (test[i] == 2) {
+                b = 1;
+            } else if (test[i] == 3) {
+                b = 2;
+            } else if (test[i] == 4) {
+                b = 3;
+            } else if (test[i] == 12) {
+                b = 1;
+            } else if (test[i] == 13) {
+                b = 2;
+            } else if (test[i] == 14) {
+                b = 3;
+            } else if (test[i] == 222) {
+                b = 1;
+            } else if (test[i] == 23) {
+                b = 2;
+            } else if (test[i] == 24) {
+                b = 3;
+            }
+        }
+
+        long end2 = System.currentTimeMillis();
+
+        System.out.println(end2 - end1);
+
     }
 }

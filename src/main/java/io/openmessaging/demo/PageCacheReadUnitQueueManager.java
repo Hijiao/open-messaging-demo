@@ -31,7 +31,7 @@ public class PageCacheReadUnitQueueManager {
         synchronized (bucketsReadQueueMap) {
             PageCacheReadUnitQueue queue = bucketsReadQueueMap.get(bucket);
             if (queue == null) {
-                queue = new PageCacheReadUnitQueue(isTopic);
+                queue = new PageCacheReadUnitQueue(bucket, isTopic);
                 bucketsReadQueueMap.put(bucket, queue);
                 PageCacheReadRunner runner = new PageCacheReadRunner(queue, bucket, filePath);
                 //runner.start();

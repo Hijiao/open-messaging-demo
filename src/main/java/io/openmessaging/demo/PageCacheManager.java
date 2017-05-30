@@ -1,17 +1,29 @@
 package io.openmessaging.demo;
 
+import io.openmessaging.MessageHeader;
+
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.util.Map;
+import java.util.Set;
+
+import static io.openmessaging.demo.Constants.*;
 
 /**
  * Created by Max on 2017/5/23.
  */
 public class PageCacheManager {
 
-    private String storePath;//TODO init
+    //TODO 批量移动buffer http://www.cnblogs.com/lxzh/archive/2013/05/10/3071680.html
+
+    private String storePath;
     private String bucket;
 
     public PageCacheManager(String bucket, String storePath) {
@@ -19,40 +31,207 @@ public class PageCacheManager {
         this.storePath = storePath;
     }
 
+    private ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1024 * 300);//消息大小最大256kb
+
 
     private int currPageNumber = -1;
-    private MappedByteBuffer lastPage;
-    MappedByteBuffer currPage;
+    private MappedByteBuffer currPage;
     int currPageRemaining;
 
 
+    String key;
+    String value;
+    byte[] body;
+    Set<Map.Entry<String, Object>> entrySet;
+
+    public void writeMessage(DefaultBytesMessage message) {
+        byteBuffer.clear();
+        if (currPage == null) {
+            currPage = createNewPageToWrite(0);
+        }
+        entrySet = ((DefaultKeyValue) message.headers()).getMap().entrySet();
+        if (entrySet.size() != 1) {
+            for (Map.Entry<String, Object> kv : entrySet) {
+                key = kv.getKey();
+                if ((!MessageHeader.TOPIC.equals(key)) && (!MessageHeader.QUEUE.equals(key))) {//MessageId
+                    byteBuffer.put(key.getBytes());
+                    byteBuffer.put(MARKET_PREFIX_HEADER_KEY);
+                    byteBuffer.put(((String) kv.getValue()).getBytes());
+                    byteBuffer.put(MARKET_PREFIX_HEADER_VALUE);
+                }
+            }
+        }
+
+        DefaultKeyValue properties = (DefaultKeyValue) message.properties();
+
+        if (properties != null) {
+            entrySet = properties.getMap().entrySet();
+            for (Map.Entry<String, Object> kv : entrySet) {
+                key = kv.getKey();
+                byteBuffer.put(key.getBytes());
+                byteBuffer.put(MARKET_PREFIX_PRO_KEY);
+                byteBuffer.put(((String) kv.getValue()).getBytes());
+                byteBuffer.put(MARKET_PREFIX_PRO_VALUE);
+            }
+        }
+
+        byteBuffer.put(message.getBody());
+        byteBuffer.put(MARKET_PREFIX_MESSAGE_END);
+
+        currPageRemaining = currPage.remaining();
+        int messageLen = byteBuffer.position();
+        byteBuffer.rewind();
+        if (messageLen >= currPageRemaining) {
+            for (int i = 0; i < currPageRemaining; i++) {
+                currPage.put(byteBuffer.get());
+            }
+            flushAndCloseLastPage();
+            currPage = createNewPageToWrite(++currPageNumber);
+            for (int i = currPageRemaining; i < messageLen; i++) {
+                currPage.put(byteBuffer.get());
+            }
+        } else {
+            for (int i = 0; i < messageLen; i++) {
+                currPage.put(byteBuffer.get());
+            }
+        }
+
+    }
+
+
+    private void wrireNextBytesToCurrPage(byte[] bytes) {
+        switch (currPage.remaining()) {
+            case 0:
+                flushAndCloseLastPage();
+                currPage = createNewPageToWrite(++currPageNumber);
+                currPage.put(bytes[0]);
+                currPage.put(bytes[1]);
+                break;
+            case 1:
+                currPage.put(bytes[0]);
+                currPage = createNewPageToWrite(++currPageNumber);
+                currPage.put(bytes[1]);
+                break;
+            default:
+                currPage.put(bytes[0]);
+                currPage.put(bytes[1]);
+        }
+
+    }
+
+
+    private byte getNextByteFromCurrPage() {
+        if (currPage != null && currPage.hasRemaining()) {
+            return currPage.get();
+        } else {
+            currPage = createNewPageToRead(++currPageNumber);
+            if (currPage == null)
+                return MARKER_PREFIX;//连着返回两次，则认为文件读取结束
+            return currPage.get();
+        }
+    }
+
+    boolean hasPackagedOneMessage = false;
+    boolean finishFlag = false;
+
+    public DefaultBytesMessage readMessage() {
+        hasPackagedOneMessage = false;
+        byteBuffer.clear();
+        if (currPage == null && currPageNumber == -1) {
+            currPage = createNewPageToRead(++currPageNumber);
+        }
+        if (currPage == null) {
+            return null;
+        }
+        currPageRemaining = currPage.remaining();
+        byte currByte;
+        byte[] keyBytes;
+
+
+        DefaultBytesMessage message = new DefaultBytesMessage();
+
+        while ((!hasPackagedOneMessage) && (!finishFlag)) {
+            currByte = getNextByteFromCurrPage();
+            if (currByte != MARKER_PREFIX) {
+                if (currByte == 0x00) {
+                    return null;
+                }
+                byteBuffer.put(currByte);
+            } else {
+                switch (getNextByteFromCurrPage()) {
+                    case HEADER_KEY_END_MARKER:
+                        keyBytes = new byte[byteBuffer.position()];
+                        byteBuffer.rewind();
+                        byteBuffer.get(keyBytes);
+                        key = new String(keyBytes);
+                        break;
+                    case HEADER_VALUE_END_MARKER:
+                        keyBytes = new byte[byteBuffer.position()];
+                        byteBuffer.rewind();
+                        byteBuffer.get(keyBytes);
+                        value = new String(keyBytes);
+                        message.putHeaders(key, value);
+                        break;
+                    case PRO_KEY_END_MARKER:
+                        keyBytes = new byte[byteBuffer.position()];
+                        byteBuffer.rewind();
+                        byteBuffer.get(keyBytes);
+                        key = new String(keyBytes);
+                        break;
+                    case PRO_VALUE_END_MARKER:
+                        keyBytes = new byte[byteBuffer.position()];
+                        byteBuffer.rewind();
+                        byteBuffer.get(keyBytes);
+                        value = new String(keyBytes);
+                        message.putProperties(key, value);
+                        break;
+                    case MESSAGE_END_MARKER:
+                        body = new byte[byteBuffer.position()];
+                        byteBuffer.rewind();
+                        byteBuffer.get(body);
+                        message.setBody(body);
+                        hasPackagedOneMessage = true;
+                        break;
+                    case MARKER_PREFIX:
+                        finishFlag = true;
+                        break;
+                }
+                byteBuffer.clear();
+            }
+        }
+        if (hasPackagedOneMessage) {
+            return message;
+        }
+        return null;
+    }
+
     public void writeByte(byte[] body) {
 
-        if (lastPage == null) {
-            lastPage = createNewPageToWrite(0);
+        if (currPage == null) {
+            currPage = createNewPageToWrite(0);
         }
-        currPageRemaining = lastPage.remaining();
+        currPageRemaining = currPage.remaining();
         int bodyAndIndexLenth = body.length + 4;
         if (currPageRemaining < bodyAndIndexLenth) {
             byte[] bodyAndIndex = packageBody(body, bodyAndIndexLenth);
             for (int i = 0; i < currPageRemaining; i++) {
-                lastPage.put(bodyAndIndex[i]);
+                currPage.put(bodyAndIndex[i]);
             }
             flushAndCloseLastPage();
-            lastPage = createNewPageToWrite(++currPageNumber);
+            currPage = createNewPageToWrite(++currPageNumber);
             for (int i = currPageRemaining; i < bodyAndIndexLenth; i++) {
-                lastPage.put(bodyAndIndex[i]);
+                currPage.put(bodyAndIndex[i]);
             }
             //for (int i =0;i<len;++i)
-            //tarByteArray=lastPage.get();
+            //tarByteArray=currPage.get();
         } else {
             byte[] index = intToByteArray(body.length);
-            lastPage.put(index[0]);
-            lastPage.put(index[1]);
-            lastPage.put(index[2]);
-            lastPage.put(index[3]);
+            currPage.put(index[0]);
+            currPage.put(index[1]);
+            currPage.put(index[2]);
+            currPage.put(index[3]);
             for (int i = 0; i < body.length; i++) {
-                lastPage.put(body[i]);
+                currPage.put(body[i]);
             }
         }
 
@@ -142,9 +321,9 @@ public class PageCacheManager {
         try {
 //            MappedByteBuffer page = bucketPageList.getLast();
 //            page.force();
-            Method getCleanerMethod = lastPage.getClass().getMethod("cleaner", new Class[0]);
+            Method getCleanerMethod = currPage.getClass().getMethod("cleaner", new Class[0]);
             getCleanerMethod.setAccessible(true);
-            sun.misc.Cleaner cleaner = (sun.misc.Cleaner) getCleanerMethod.invoke(lastPage, new Object[0]);
+            sun.misc.Cleaner cleaner = (sun.misc.Cleaner) getCleanerMethod.invoke(currPage, new Object[0]);
             cleaner.clean();
             System.gc();
         } catch (Exception e) {
@@ -183,13 +362,50 @@ public class PageCacheManager {
 
     }
 
+    private static String decoder(ByteBuffer buffer) {
+        Charset charset = Charset.forName("US-ASCII");
+        CharsetDecoder decoder = charset.newDecoder();
+        try {
+            return decoder.decode(buffer).toString();
+        } catch (CharacterCodingException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
 
     public static void main(String[] args) {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(10);
+        String s = "abcdef";
+        byte[] bytes = new byte[]{'a', 'b', 'c', 'd', 'e', 0};
+        byteBuffer.put(s.getBytes(Charset.forName("US-ASCII")));
+        byte[] out = new byte[6];
+        System.out.println("byteBuffer pos:" + byteBuffer.position());
+        System.out.println("byteBuffer remaining Size:" + byteBuffer.remaining());
+        // byteBuffer.flip();
+        System.out.println("byteBuffer pos:" + byteBuffer.position());
 
-        int int2 = 199999991;
-        byte[] bytesInt = intToByteArray(int2);
-        System.out.println("bytesInt=" + bytesInt);//bytesInt=[B@de6ced
-        System.out.println("int ->byte len:" + bytesInt.length);
+        System.out.println("byteBuffer  remaining Size:" + byteBuffer.remaining());
+
+//        StringBuilder
+//        StringBuilder builder=new StringBuilder("UTF-8");
+        StringBuffer buffer = new StringBuffer();
+        for (int i = 0; i < byteBuffer.position(); i++) {
+            buffer.append(byteBuffer.get(i));
+        }
+
+
+//        System.out.println(new String(out));
+//        String b=decoder(byteBuffer);
+//        System.out.println(b);
+        System.out.println(buffer.toString());
+        byte nullb = byteBuffer.get(7);
+        System.out.println(nullb == 0);
+        System.out.println();
+
+
     }
 
 }
+
+
