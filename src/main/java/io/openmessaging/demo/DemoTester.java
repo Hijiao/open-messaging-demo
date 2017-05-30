@@ -8,7 +8,7 @@ import java.util.List;
 import org.junit.Assert;
 
 public class DemoTester {
-    private static final int MESSAGE_LENGTH = 10;
+    private static final int MESSAGE_LENGTH = 10000;
 
     public static void main(String[] args) {
         KeyValue properties = new DefaultKeyValue();
@@ -34,7 +34,12 @@ public class DemoTester {
         List<Message> messagesForQueue2 = new ArrayList<>(MESSAGE_LENGTH);
         for (int i = 0; i < MESSAGE_LENGTH; i++) {
             //注意实际比赛可能还会向消息的headers或者properties里面填充其它内容
-            messagesForTopic1.add(producer.createBytesMessageToTopic(topic1,  (topic1 + i).getBytes()));
+            BytesMessage b = producer.createBytesMessageToTopic(topic1, (topic1 + i).getBytes());
+            b.putHeaders("test_header_key", "test_header_value");
+            b.putProperties("test_pro_key", "test_pro_value");
+            b.putProperties("test_pro_key2", "test_pro_value2");
+
+            messagesForTopic1.add(b);
             messagesForTopic2.add(producer.createBytesMessageToTopic(topic2,  (topic2 + i).getBytes()));
             messagesForQueue1.add(producer.createBytesMessageToQueue(queue1, (queue1 + i).getBytes()));
             messagesForQueue2.add(producer.createBytesMessageToQueue(queue2, (queue2 + i).getBytes()));
@@ -55,7 +60,7 @@ public class DemoTester {
         MessageFileStore fileStore = MessageFileStore.getInstance();
         //fileStore.showAllBuckets();
         try {
-            Thread.sleep(1000);
+            Thread.sleep(1000000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -72,23 +77,23 @@ public class DemoTester {
             while (true) {
                 Message message = consumer1.poll();
                 if (message == null) {
-                    System.out.println("null consume message");
+                    //System.out.println("null consume message");
                     //拉取为null则认为消息已经拉取完毕
                     break;
                 }
-                System.out.println("consume -->" + new String(((BytesMessage) message).getBody()));
+                // System.out.println("consume -->" + new String(((BytesMessage) message).getBody()));
                 String topic = message.headers().getString(MessageHeader.TOPIC);
                 String queue = message.headers().getString(MessageHeader.QUEUE);
                 //实际测试时，会一一比较各个字段
                 if (topic != null) {
                     //Assert.assertEquals(topic1, topic);
 
-                    System.out.println(new String(((BytesMessage) messagesForTopic1.get(topic1Offset++)).getBody()) + "-->" + new String(((BytesMessage) message).getBody()));
+                    System.out.println(new String(((BytesMessage) messagesForTopic1.get(topic1Offset++)).getBody()) + "===" + new String(((BytesMessage) message).getBody()));
                     //Assert.assertEquals(messagesForTopic1.get(topic1Offset++), message);
                 } else {
                     Assert.assertEquals(queue1, queue);
                     //Assert.assertEquals(messagesForQueue1.get(queue1Offset++), message);
-                    //System.out.println(new String(((BytesMessage)messagesForQueue1.get(queue1Offset++)).getBody())+"-->"+new String(((BytesMessage)message).getBody()));
+                    System.out.println(new String(((BytesMessage) messagesForQueue1.get(queue1Offset++)).getBody()) + "===" + new String(((BytesMessage) message).getBody()));
 
                 }
             }
@@ -102,7 +107,7 @@ public class DemoTester {
         {
             PullConsumer consumer2 = new DefaultPullConsumer(properties);
             List<String> topics = new ArrayList<>();
-            // topics.add(topic1);
+            topics.add(topic1);
             topics.add(topic2);
             consumer2.attachQueue(queue2, topics);
 
@@ -115,19 +120,23 @@ public class DemoTester {
                     //拉取为null则认为消息已经拉取完毕
                     break;
                 }
-                System.out.println("consume -->" + new String(((BytesMessage) message).getBody()));
+                //System.out.println("consume -->" + new String(((BytesMessage) message).getBody()));
                 String topic = message.headers().getString(MessageHeader.TOPIC);
                 String queue = message.headers().getString(MessageHeader.QUEUE);
                 //实际测试时，会一一比较各个字段
                 if (topic != null) {
                     if (topic.equals(topic1)) {
-                        Assert.assertEquals(messagesForTopic1.get(topic1Offset++), message);
+                        System.out.println(new String(((BytesMessage) messagesForTopic1.get(topic1Offset++)).getBody()) + "===" + new String(((BytesMessage) message).getBody()));
+
+                        //Assert.assertEquals(messagesForTopic1.get(topic1Offset++), message);
                     } else {
                         Assert.assertEquals(topic2, topic);
                         Assert.assertEquals(messagesForTopic2.get(topic2Offset++), message);
                     }
                 } else {
                     Assert.assertEquals(queue2, queue);
+                    System.out.println(new String(((BytesMessage) messagesForQueue2.get(queue2Offset++)).getBody()) + "===" + new String(((BytesMessage) message).getBody()));
+
                     Assert.assertEquals(messagesForQueue2.get(queue2Offset++), message);
                 }
             }
