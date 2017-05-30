@@ -45,9 +45,10 @@ public class PageCacheManager {
     Set<Map.Entry<String, Object>> entrySet;
 
     public void writeMessage(DefaultBytesMessage message) {
+        System.out.println("write:" + message);
         byteBuffer.clear();
         if (currPage == null) {
-            currPage = createNewPageToWrite(0);
+            currPage = createNewPageToWrite(++currPageNumber);
         }
         entrySet = ((DefaultKeyValue) message.headers()).getMap().entrySet();
         if (entrySet.size() != 1) {
@@ -208,7 +209,7 @@ public class PageCacheManager {
     public void writeByte(byte[] body) {
 
         if (currPage == null) {
-            currPage = createNewPageToWrite(0);
+            currPage = createNewPageToWrite(++currPageNumber);
         }
         currPageRemaining = currPage.remaining();
         int bodyAndIndexLenth = body.length + 4;
@@ -291,10 +292,10 @@ public class PageCacheManager {
 
 
     private MappedByteBuffer createNewPageToWrite(int index) {
-        StringBuffer buffer = new StringBuffer();
-        buffer.append(storePath).append(File.separator).append(bucket).append("_").append(String.format("%03d", index));
+        StringBuilder builder = new StringBuilder();
+        builder.append(storePath).append(File.separator).append(bucket).append("_").append(String.format("%03d", index));
         try {
-            RandomAccessFile randAccessFile = new RandomAccessFile(new File(buffer.toString()), "rw");
+            RandomAccessFile randAccessFile = new RandomAccessFile(new File(builder.toString()), "rw");
             MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_WRITE, 0, Constants.PAGE_SIZE);
             return newPage;
         } catch (Exception e) {

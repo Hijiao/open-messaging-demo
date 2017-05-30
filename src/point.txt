@@ -29,3 +29,4 @@
 128M sendNum 40000000, Cost 201382 ms  1013M 11.7M  813M 2121M
 
 512M  sendNum 40000000, Cost 70570 ms  （写之后）990M 14.5M  857M 2100M (备注：多打了1000行log)
+512M  sendNum 40000000, Cost 70332 ms          996M 14.3M  813M 2138M

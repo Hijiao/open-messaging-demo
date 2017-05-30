@@ -21,7 +21,7 @@ public class Constants {
 
     public static final int PAGE_CACHE_WRITE_KEEP_ALIVE_TIME = 60; //60s
 
-    public static final int SEND_TO_WRITE_QUEUE_BATCH_SIZE = 1024;
+    public static final int SEND_TO_WRITE_QUEUE_BATCH_SIZE = 10240;
 
     public static final byte MARKER_PREFIX = '#';
 

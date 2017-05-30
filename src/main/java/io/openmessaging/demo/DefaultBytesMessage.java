@@ -103,9 +103,9 @@ public class DefaultBytesMessage implements BytesMessage {
     @Override
     public String toString() {
         return "DefaultBytesMessage{" +
-                "headers=" + headers +
-                ", properties=" + properties +
-                ", body=" + Arrays.toString(body) +
-                '}';
+                "headers={" + headers +
+                "}, properties={" + properties +
+                "}, body={" + Arrays.toString(body) +
+                "}}";
     }
 }
