@@ -26,7 +26,7 @@ public class PageCacheWriteRunner extends Thread {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-//        cacheManager.flushAndCloseLastPage();
+//        cacheManager.closeCurrPage();
     }
 
     public PageCacheManager getCacheManager() {

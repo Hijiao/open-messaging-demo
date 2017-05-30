@@ -31,7 +31,7 @@ public class DemoTestSingle {
         }
 
         Message result = consumer.poll();
-        System.out.println(result);
+        System.out.println("result: " + result);
 
         String topicName = result.headers().getString(MessageHeader.TOPIC);
         System.out.println("topicName:" + topicName);

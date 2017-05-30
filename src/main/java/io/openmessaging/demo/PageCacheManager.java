@@ -85,7 +85,7 @@ public class PageCacheManager {
             for (int i = 0; i < currPageRemaining; i++) {
                 currPage.put(byteBuffer.get());
             }
-            flushAndCloseLastPage();
+            closeCurrPage();
             currPage = createNewPageToWrite(++currPageNumber);
             for (int i = currPageRemaining; i < messageLen; i++) {
                 currPage.put(byteBuffer.get());
@@ -99,36 +99,19 @@ public class PageCacheManager {
     }
 
 
-    private void wrireNextBytesToCurrPage(byte[] bytes) {
-        switch (currPage.remaining()) {
-            case 0:
-                flushAndCloseLastPage();
-                currPage = createNewPageToWrite(++currPageNumber);
-                currPage.put(bytes[0]);
-                currPage.put(bytes[1]);
-                break;
-            case 1:
-                currPage.put(bytes[0]);
-                currPage = createNewPageToWrite(++currPageNumber);
-                currPage.put(bytes[1]);
-                break;
-            default:
-                currPage.put(bytes[0]);
-                currPage.put(bytes[1]);
-        }
-
-    }
-
-
     private byte getNextByteFromCurrPage() {
-        if (currPage != null && currPage.hasRemaining()) {
-            return currPage.get();
-        } else {
-            currPage = createNewPageToRead(++currPageNumber);
-            if (currPage == null)
-                return MARKER_PREFIX;//连着返回两次，则认为文件读取结束
-            return currPage.get();
+
+        if (currPage != null) {
+            if (currPage.hasRemaining()) {
+                return currPage.get();
+            } else {
+                closeCurrPage();
+                currPage = createNewPageToRead(++currPageNumber);
+            }
         }
+        if (currPage == null)
+            return MARKER_PREFIX;//连着返回两次，则认为文件读取结束
+        return currPage.get();
     }
 
     boolean hasPackagedOneMessage = false;
@@ -136,13 +119,14 @@ public class PageCacheManager {
 
     public DefaultBytesMessage readMessage() {
         hasPackagedOneMessage = false;
-        byteBuffer.clear();
+
         if (currPage == null && currPageNumber == -1) {
             currPage = createNewPageToRead(++currPageNumber);
         }
         if (currPage == null) {
             return null;
         }
+        byteBuffer.clear();
         currPageRemaining = currPage.remaining();
         byte currByte;
         byte[] keyBytes;
@@ -217,7 +201,7 @@ public class PageCacheManager {
             for (int i = 0; i < currPageRemaining; i++) {
                 currPage.put(bodyAndIndex[i]);
             }
-            flushAndCloseLastPage();
+            closeCurrPage();
             currPage = createNewPageToWrite(++currPageNumber);
             for (int i = currPageRemaining; i < bodyAndIndexLenth; i++) {
                 currPage.put(bodyAndIndex[i]);
@@ -304,10 +288,10 @@ public class PageCacheManager {
     }
 
     private MappedByteBuffer createNewPageToRead(int index) {
-        StringBuffer buffer = new StringBuffer();
-        buffer.append(storePath).append(File.separator).append(bucket).append("_").append(String.format("%03d", index));
+        StringBuilder builder = new StringBuilder();
+        builder.append(storePath).append(File.separator).append(bucket).append("_").append(String.format("%03d", index));
         try {
-            RandomAccessFile randAccessFile = new RandomAccessFile(new File(buffer.toString()), "r");
+            RandomAccessFile randAccessFile = new RandomAccessFile(new File(builder.toString()), "r");
             MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, Constants.PAGE_SIZE);
             return newPage;
         } catch (Exception e) {
@@ -317,7 +301,7 @@ public class PageCacheManager {
     }
 
 
-    public void flushAndCloseLastPage() {
+    public void closeCurrPage() {
         try {
 //            MappedByteBuffer page = bucketPageList.getLast();
 //            page.force();
