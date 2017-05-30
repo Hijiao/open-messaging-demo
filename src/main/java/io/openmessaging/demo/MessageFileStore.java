@@ -30,7 +30,7 @@ public class MessageFileStore {
     public void putMessage(boolean isTopic, String bucket, Message message) {
         synchronized (beforeWriteBody) {
             if (!beforeWriteBody.containsKey(bucket)) {
-                beforeWriteBody.put(bucket, new ArrayList(Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE + 100));
+                beforeWriteBody.put(bucket, new ArrayList(Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE + 50));
             }
         }
 

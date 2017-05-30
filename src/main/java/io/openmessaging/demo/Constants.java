@@ -12,7 +12,7 @@ public class Constants {
     //    public static final int PAGE_SIZE = 1 << PAGE_SIZE_BITE_COUNT; //8M  COUNT=23
     public static final int PAGE_SIZE = 1024 * 1024 * 512; //128M
 
-    public static final int SEND_TO_WRITE_QUEUE_BATCH_SIZE = 2048;
+    public static final int SEND_TO_WRITE_QUEUE_BATCH_SIZE = 1024;
 
 
     public static final int offsetCounterpart = PAGE_SIZE - 1;
