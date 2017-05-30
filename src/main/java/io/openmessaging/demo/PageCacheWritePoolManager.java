@@ -1,9 +1,5 @@
 package io.openmessaging.demo;
 
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
 /**
  * Created by Max on 2017/5/24.
  */

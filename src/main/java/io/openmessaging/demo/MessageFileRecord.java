@@ -1,6 +1,5 @@
 package io.openmessaging.demo;
 
-import org.omg.PortableServer.THREAD_POLICY_ID;
 
 /**
  * Created by Max on 2017/5/19.

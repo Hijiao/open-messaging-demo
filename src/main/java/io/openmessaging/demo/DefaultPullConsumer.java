@@ -7,7 +7,6 @@ import io.openmessaging.PullConsumer;
 import java.util.*;
 
 public class DefaultPullConsumer implements PullConsumer {
-    //    private MessageStore messageStore = MessageStore.getInstance();
     private MessageFileStore messageStore = MessageFileStore.getInstance();
     private KeyValue properties;
     private String queue;

@@ -1,10 +1,7 @@
 package io.openmessaging.demo;
 
-import io.openmessaging.Message;
 import io.openmessaging.MessageHeader;
-import sun.dc.pr.PRError;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**

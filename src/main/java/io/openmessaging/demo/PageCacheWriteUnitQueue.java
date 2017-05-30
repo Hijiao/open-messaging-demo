@@ -1,6 +1,5 @@
 package io.openmessaging.demo;
 
-import java.util.LinkedList;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**

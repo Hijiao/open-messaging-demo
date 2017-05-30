@@ -1,7 +1,5 @@
 package io.openmessaging.demo;
 
-import io.openmessaging.BytesMessage;
-
 import java.io.File;
 import java.io.RandomAccessFile;
 
