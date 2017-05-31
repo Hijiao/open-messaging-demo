@@ -31,18 +31,27 @@ public class PageCacheWriteUnitQueueManager {
     }
 //    private static final ThreadPoolExecutor executor = PageCacheWritePoolManager.getThreadPool();
 
+
+    public static synchronized void intBucketWriteQueue(String bucket, boolean isTopic) {
+        PageCacheWriteUnitQueue queue = new PageCacheWriteUnitQueue(isTopic);
+        PageCacheWriteRunner runner = new PageCacheWriteRunner(queue, bucket, filePath);
+        bucketsWriteThreadMap.put(bucket, runner);
+        //executor.execute(runner);
+        runner.start();
+    }
+
     //使用： getBucketWriteQueue().productWriteUnit(writeUnit);
-    public PageCacheWriteUnitQueue getBucketWriteQueue(String bucket, boolean isTopic) {
-        synchronized (bucketsWriteThreadMap) {
-            PageCacheWriteRunner runner = bucketsWriteThreadMap.get(bucket);
-            if (runner == null) {
-                // System.out.println("create new writeUnitQueue :" + bucket + "  isTopic:" + isTopic);
-                PageCacheWriteUnitQueue queue = new PageCacheWriteUnitQueue(isTopic);
-                runner = new PageCacheWriteRunner(queue, bucket, filePath);
-                bucketsWriteThreadMap.put(bucket, runner);
-                //executor.execute(runner);
-                runner.start();
-            }
+    public PageCacheWriteUnitQueue getBucketWriteQueue(String bucket) {
+//        synchronized (bucketsWriteThreadMap) {
+        PageCacheWriteRunner runner = bucketsWriteThreadMap.get(bucket);
+//            if (runner == null) {
+//                // System.out.println("create new writeUnitQueue :" + bucket + "  isTopic:" + isTopic);
+//                PageCacheWriteUnitQueue queue = new PageCacheWriteUnitQueue(isTopic);
+//                runner = new PageCacheWriteRunner(queue, bucket, filePath);
+//                bucketsWriteThreadMap.put(bucket, runner);
+//                //executor.execute(runner);
+//                runner.start();
+//            }
 //            PageCacheWriteUnitQueue queue = bucketsWriteQueueMap.get(bucket);
 //            if (queue == null) {
 //                queue = new PageCacheWriteUnitQueue(isTopic);
@@ -53,7 +62,7 @@ public class PageCacheWriteUnitQueueManager {
 //                executor.execute(runner);
 //            }
 
-            return runner.getQueue();
-        }
+        return runner.getQueue();
+//        }
     }
 }

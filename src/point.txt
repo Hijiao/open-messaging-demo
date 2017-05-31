@@ -40,3 +40,5 @@
 
 [2017-05-31 10:47:21,826] Produce Finished, sendNum 40000000, Cost 174069 ms   pullNum=9584202||pullCost=30344
 
+[2017-05-31 12:13:09,357] Produce Finished, sendNum 40000000, Cost 248819 ms
+

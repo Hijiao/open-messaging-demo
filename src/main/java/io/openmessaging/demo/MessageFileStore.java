@@ -3,10 +3,10 @@ package io.openmessaging.demo;
 
 import io.openmessaging.Message;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Created by Max on 2017/5/19.
@@ -20,42 +20,36 @@ public class MessageFileStore {
     }
 
 
-    private Map<String, List<DefaultBytesMessage>> beforeWriteBody = new ConcurrentHashMap<>();
+    private Map<String, Queue<DefaultBytesMessage>> beforeWriteBodyMap = new ConcurrentHashMap<>();
 
     private PageCacheWriteUnitQueueManager writeQueueManager = PageCacheWriteUnitQueueManager.getInstance();
     private PageCacheReadUnitQueueManager readUnitQueueManager = PageCacheReadUnitQueueManager.getInstance();
 
 
-    public void putMessage(boolean isTopic, String bucket, Message message) {
-        synchronized (beforeWriteBody) {
-            if (!beforeWriteBody.containsKey(bucket)) {
-                beforeWriteBody.put(bucket, new ArrayList(Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE + 64));
-            }
+    public synchronized void putMessage(boolean isTopic, String bucket, Message message) {
+
+        if (!beforeWriteBodyMap.containsKey(bucket)) {
+            beforeWriteBodyMap.put(bucket, new ConcurrentLinkedQueue<>());
+            writeQueueManager.intBucketWriteQueue(bucket, isTopic);
         }
-
-        allocateOnFileTableAndSendToWriteQueue(isTopic, bucket, (DefaultBytesMessage) message);
-    }
-
-
-    public void allocateOnFileTableAndSendToWriteQueue(boolean isTopic, String bucket, DefaultBytesMessage message) {
-        List<DefaultBytesMessage> beforeWriteBodyList = beforeWriteBody.get(bucket);
-        synchronized (beforeWriteBodyList) {
-            beforeWriteBodyList.add(message);
-            if (beforeWriteBodyList.size() > Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE) {
-                PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket, isTopic);
-                sendBatchMessageToQueue(beforeWriteBodyList, queue);
-            }
+        Queue<DefaultBytesMessage> beforeWriteBodyQueue = beforeWriteBodyMap.get(bucket);
+        beforeWriteBodyQueue.add((DefaultBytesMessage) message);
+        if (beforeWriteBodyQueue.size() > Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE) {
+            PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket);
+            sendBatchMessageToQueue(beforeWriteBodyQueue, queue);
         }
 
     }
 
-    private void sendBatchMessageToQueue(List<DefaultBytesMessage> beforeWriteBodyList, PageCacheWriteUnitQueue queue) {
+
+    private void sendBatchMessageToQueue(Queue<DefaultBytesMessage> beforeWriteBodyQueue, PageCacheWriteUnitQueue queue) {
         try {
-            for (int i = 0; i < beforeWriteBodyList.size(); i++) {
-                DefaultBytesMessage message = beforeWriteBodyList.get(i);
-                queue.putMessageInWriteQueue(message);
+            while (!beforeWriteBodyQueue.isEmpty()) {
+                queue.putMessageInWriteQueue(beforeWriteBodyQueue.poll());
+
             }
-            beforeWriteBodyList.clear();
+
+            beforeWriteBodyQueue.clear();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -83,19 +77,18 @@ public class MessageFileStore {
         }
         Map<String, PageCacheWriteRunner> writeRunnerMap = writeQueueManager.getBucketsWriteThreadMap();
 
-        for (Map.Entry<String, List<DefaultBytesMessage>> entry : beforeWriteBody.entrySet()) {
+        for (Map.Entry<String, Queue<DefaultBytesMessage>> entry : beforeWriteBodyMap.entrySet()) {
             //System.out.println("bucket:====== " + entry.getKey());
-            List<DefaultBytesMessage> beforeWriteBodyList = entry.getValue();
+            Queue<DefaultBytesMessage> beforeWriteBodyQueue = entry.getValue();
             PageCacheWriteRunner runner = writeRunnerMap.get(entry.getKey());
-            if (beforeWriteBodyList.isEmpty()) {
+            if (beforeWriteBodyQueue.isEmpty()) {
                 runner.getQueue().setFinish(true);
             } else {
 
                 //TODO 当总数小于批次数时，queue一直未被初始化，flush会报错
-//                PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(entry.getKey(), isTopic);
-
-                PageCacheWriteUnitQueue queue = runner.getQueue();
-                sendBatchMessageToQueue(beforeWriteBodyList, queue);
+                PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(entry.getKey());
+                // PageCacheWriteUnitQueue queue = runner.getQueue();
+                sendBatchMessageToQueue(beforeWriteBodyQueue, queue);
                 queue.setFinish(true);
             }
 
