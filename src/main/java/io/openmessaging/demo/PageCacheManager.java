@@ -32,7 +32,8 @@ public class PageCacheManager {
         this.isTopic = isTopic;
     }
 
-    private ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1024 * 300);//消息大小最大256kb
+    private ByteBuffer byteBuffer = ByteBuffer.allocate(1024 * 300);//消息大小最大256kb
+    private byte[] byteArray = new byte[1024 * 256];
 
 
     private int currPageNumber = -1;
@@ -127,6 +128,7 @@ public class PageCacheManager {
     byte[] keyBytes;
 
     public DefaultBytesMessage readMessage() {
+        int byteArrayLen = 0;
 
         //TODO 拼接message头的工作在这里完成
         message = DefaultMessageFactory.createByteMessage(bucket, isTopic);
@@ -137,7 +139,6 @@ public class PageCacheManager {
         if (currPage == null) {
             return null;
         }
-        byteBuffer.clear();
         currPageRemaining = currPage.remaining();
         while ((!hasPackagedOneMessage) && (!finishFlag)) {
             currByte = getNextByteFromCurrPage();
@@ -145,45 +146,25 @@ public class PageCacheManager {
                 if (currByte == 0x00) {
                     return null;
                 }
-                byteBuffer.put(currByte);
+                byteArray[byteArrayLen++] = currByte;
             } else {
                 switch (getNextByteFromCurrPage()) {
                     case HEADER_KEY_END_MARKER:
-                        keyBytes = new byte[byteBuffer.position()];
-                        byteBuffer.rewind();
-                        byteBuffer.get(keyBytes);
-                        key = new String(keyBytes);
+                        key = new String(byteArray, 0, byteArrayLen);
                         break;
                     case HEADER_VALUE_END_MARKER:
-                        keyBytes = new byte[byteBuffer.position()];
-                        byteBuffer.rewind();
-                        byteBuffer.get(keyBytes);
-                        value = new String(keyBytes);
-                        message.putHeaders(key, value);
+                        message.putHeaders(key, new String(byteArray, 0, byteArrayLen));
                         key = null;
-                        value = null;
-
                         break;
                     case PRO_KEY_END_MARKER:
-                        keyBytes = new byte[byteBuffer.position()];
-                        byteBuffer.rewind();
-                        byteBuffer.get(keyBytes);
-                        key = new String(keyBytes);
+                        key = new String(byteArray, 0, byteArrayLen);
                         break;
                     case PRO_VALUE_END_MARKER:
-                        keyBytes = new byte[byteBuffer.position()];
-                        byteBuffer.rewind();
-                        byteBuffer.get(keyBytes);
-                        value = new String(keyBytes);
-                        message.putProperties(key, value);
+                        message.putProperties(key, new String(byteArray, 0, byteArrayLen));
                         key = null;
-                        value = null;
                         break;
                     case MESSAGE_END_MARKER:
-                        body = new byte[byteBuffer.position()];
-                        byteBuffer.rewind();
-                        byteBuffer.get(body);
-                        message.setBody(body);
+                        message.setBody(new String(byteArray, 0, byteArrayLen).getBytes());
                         hasPackagedOneMessage = true;
                         body = null;
                         break;
@@ -191,10 +172,11 @@ public class PageCacheManager {
                         finishFlag = true;
                         break;
                 }
-                byteBuffer.clear();
+                byteArrayLen = 0;
             }
         }
         if (hasPackagedOneMessage) {
+            // System.out.println(message);
             return message;
         }
         return null;

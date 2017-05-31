@@ -20,6 +20,7 @@ public class DemoTestSingle {
         b.putProperties("PRO_OFFSET", "PRODUCER1_1");
         b.putProperties("dprq1", "s465d");
         producer.send(b);
+        producer.flush();
 
         PullConsumer consumer = new DefaultPullConsumer(properties);
         consumer.attachQueue("qq", Collections.singletonList(topic1));

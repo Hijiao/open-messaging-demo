@@ -7,6 +7,7 @@ import io.openmessaging.PullConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -84,7 +85,7 @@ public class ConsumerTester {
                     if (queueOrTopic == null || queueOrTopic.length() == 0) {
                         throw new Exception("Queue or Topic name is empty");
                     }
-                    String body = new String(message.getBody());
+                    String body = new String(message.getBody(), Charset.forName("UTF-8"));
 //                    if (message.headers().getString(MessageHeader.TOPIC) != null) {
                     if (count < 10) {
                         ++count;
