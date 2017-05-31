@@ -22,22 +22,21 @@ public class PageCacheReadUnitQueueManager {
         this.filePath = filePath;
     }
 
+    public synchronized static void intPageCacheReadUnitQueu(String bucket, boolean isTopic) {
+        PageCacheReadUnitQueue queue = bucketsReadQueueMap.get(bucket);
+        if (queue == null) {
+            queue = new PageCacheReadUnitQueue(bucket, isTopic);
+            bucketsReadQueueMap.put(bucket, queue);
+            PageCacheReadRunner runner = new PageCacheReadRunner(queue, bucket, filePath);
+            runner.start();
+        }
+
+    }
+
 
     //使用：getBucketReadUnitQueue.consumeReadBody;
     public static PageCacheReadUnitQueue getBucketReadUnitQueue(String bucket, boolean isTopic) {
-        synchronized (bucketsReadQueueMap) {
-            PageCacheReadUnitQueue queue = bucketsReadQueueMap.get(bucket);
-            if (queue == null) {
-                queue = new PageCacheReadUnitQueue(bucket, isTopic);
-                bucketsReadQueueMap.put(bucket, queue);
-                PageCacheReadRunner runner = new PageCacheReadRunner(queue, bucket, filePath);
-                runner.start();
-//                ThreadPoolExecutor executor = PageCacheReadPoolManager.getThreadPool();
-//                executor.execute(runner);
-            }
-            return queue;
-
-        }
+        return bucketsReadQueueMap.get(bucket);
     }
-
 }
+

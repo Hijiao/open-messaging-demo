@@ -13,10 +13,10 @@ public class DefaultPullConsumer implements PullConsumer {
     private Set<String> buckets = new HashSet<>();
     private List<String> bucketList = new ArrayList<>();
 
-    private PageCacheReadUnitQueueManager queueManager = PageCacheReadUnitQueueManager.getInstance();
+    private PageCacheReadUnitQueueManager readQueueManager = PageCacheReadUnitQueueManager.getInstance();
     public DefaultPullConsumer(KeyValue properties) {
         this.properties = properties;
-        queueManager.setFilePath(properties.getString("STORE_PATH"));
+        readQueueManager.setFilePath(properties.getString("STORE_PATH"));
     }
 
 
@@ -65,6 +65,12 @@ public class DefaultPullConsumer implements PullConsumer {
         if (queue != null && !queue.equals(queueName)) {
             throw new ClientOMSException("You have alreadly attached to a queue " + queue);
         }
+        readQueueManager.intPageCacheReadUnitQueu(queueName, false);
+
+        for (String topic : topics) {
+            readQueueManager.intPageCacheReadUnitQueu(topic, true);
+        }
+
         queue = queueName;
         //buckets.add(queueName);
         buckets.addAll(topics);

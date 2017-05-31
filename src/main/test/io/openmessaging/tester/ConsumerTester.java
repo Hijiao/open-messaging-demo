@@ -86,10 +86,10 @@ public class ConsumerTester {
                     }
                     String body = new String(message.getBody());
 //                    if (message.headers().getString(MessageHeader.TOPIC) != null) {
-//                        if (count < 10) {
-//                            ++count;
-//                            System.out.println("----------------> " + Thread.currentThread().getName() + " : " + pullNum + "body--> " + body);
-//                        }
+                    if (count < 10) {
+                        ++count;
+                        System.out.println("----------------> " + Thread.currentThread().getName() + " : " + pullNum + "body--> " + body);
+                    }
 //                    }
                     int index = body.lastIndexOf("_");
                     String producer = body.substring(0, index);
