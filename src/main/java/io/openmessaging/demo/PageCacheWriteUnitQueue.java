@@ -12,6 +12,7 @@ public class PageCacheWriteUnitQueue {
     }
 
     private boolean isTopic;
+    private boolean isFinish = false;
 
     private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue<>();
 
@@ -22,10 +23,15 @@ public class PageCacheWriteUnitQueue {
     }
 
     public DefaultBytesMessage getMessageFromWriteQueue() throws InterruptedException {
-        return queue.take();
-//        while (queue.isEmpty()) {
-//        }
-//        return queue.poll();
+        //return queue.take();
+        while (queue.isEmpty()) {
+            if (!isFinish) {
+                Thread.sleep(100);
+            } else {
+                return null;
+            }
+        }
+        return queue.poll();
     }
 
     public boolean isTopic() {
@@ -34,5 +40,9 @@ public class PageCacheWriteUnitQueue {
 
     public void setTopic(boolean topic) {
         isTopic = topic;
+    }
+
+    public void setFinish(boolean finish) {
+        isFinish = finish;
     }
 }

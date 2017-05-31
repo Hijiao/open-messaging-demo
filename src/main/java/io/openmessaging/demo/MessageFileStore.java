@@ -26,7 +26,6 @@ public class MessageFileStore {
     private PageCacheReadUnitQueueManager readUnitQueueManager = PageCacheReadUnitQueueManager.getInstance();
 
 
-
     public void putMessage(boolean isTopic, String bucket, Message message) {
         synchronized (beforeWriteBody) {
             if (!beforeWriteBody.containsKey(bucket)) {
@@ -74,14 +73,38 @@ public class MessageFileStore {
         return message;
     }
 
+    boolean hasFlushed = false;
+
     public synchronized void flushWriteBuffers() {
+        if (hasFlushed) {
+            return;
+        } else {
+            hasFlushed = true;
+        }
+        Map<String, PageCacheWriteRunner> writeRunnerMap = writeQueueManager.getBucketsWriteThreadMap();
+
         for (Map.Entry<String, List<DefaultBytesMessage>> entry : beforeWriteBody.entrySet()) {
             //System.out.println("bucket:====== " + entry.getKey());
             List<DefaultBytesMessage> beforeWriteBodyList = entry.getValue();
-            if (beforeWriteBodyList.isEmpty()) continue;
-            PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(entry.getKey(), true);
-            sendBatchMessageToQueue(beforeWriteBodyList, queue);
-        }
-    }
+            PageCacheWriteRunner runner = writeRunnerMap.get(entry.getKey());
+            if (beforeWriteBodyList.isEmpty()) {
+                runner.getQueue().setFinish(true);
+            } else {
+                PageCacheWriteUnitQueue queue = runner.getQueue();
+                sendBatchMessageToQueue(beforeWriteBodyList, queue);
+                queue.setFinish(true);
+            }
 
+        }
+        try {
+
+            for (PageCacheWriteRunner writeRunner : writeRunnerMap.values()) {
+                writeRunner.join();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println("all write threads exit");
+
+    }
 }

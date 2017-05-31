@@ -34,5 +34,6 @@
 512M  sendNum 40000000, Cost 212458 ms         2523M 5060k 1389M 41.4M
 512M  sendNum 40000000, Cost 216231 ms          2952M 6292k  913M 88.0M
 512M 256M 40000000, Cost 210285 ms              2899M 6752k 1021M 31.6M
+[2017-05-31 01:17:39,874] Produce Finished, sendNum 40000000, Cost 219434 ms
 
 

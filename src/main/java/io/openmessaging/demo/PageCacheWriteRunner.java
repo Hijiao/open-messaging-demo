@@ -20,13 +20,22 @@ public class PageCacheWriteRunner extends Thread {
 
     public void run() {
         try {
-            while (true) {
-                cacheManager.writeMessage(queue.getMessageFromWriteQueue());
+            DefaultBytesMessage message = queue.getMessageFromWriteQueue();
+            while (message != null) {
+                cacheManager.writeMessage(message);
+                message = queue.getMessageFromWriteQueue();
             }
+            freeCacheManager();
+            //System.out.println(queueBucketName+": WriteQueue empty ,exit");
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 //        cacheManager.closeCurrPage();
+    }
+
+    private void freeCacheManager() {
+        this.cacheManager = null;
+        System.gc();
     }
 
     public PageCacheManager getCacheManager() {
@@ -35,5 +44,9 @@ public class PageCacheWriteRunner extends Thread {
 
     public PageCacheWriteUnitQueue getQueue() {
         return queue;
+    }
+
+    public String getQueueBucketName() {
+        return queueBucketName;
     }
 }

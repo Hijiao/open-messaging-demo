@@ -21,6 +21,7 @@ public class PageCacheWritePoolManager {
                     new ArrayBlockingQueue<Runnable>(128),
                     new ThreadPoolExecutor.DiscardOldestPolicy());
         }
+
         return threadPool;
     }
 

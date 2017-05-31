@@ -2,7 +2,6 @@ package io.openmessaging.demo;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * Created by Max on 2017/5/23.
@@ -17,7 +16,7 @@ public class PageCacheWriteUnitQueueManager {
         return INSTANCE;
     }
 
-    private static final ThreadPoolExecutor executor = PageCacheWritePoolManager.getThreadPool();
+    //private static final ThreadPoolExecutor executor = PageCacheWritePoolManager.getThreadPool();
 
     public void setFilePath(String filePath) {
         this.filePath = filePath;
@@ -27,6 +26,9 @@ public class PageCacheWriteUnitQueueManager {
 //    private static final Map<String, PageCacheWriteUnitQueue> bucketsWriteQueueMap = new ConcurrentHashMap<>();
     private static final Map<String, PageCacheWriteRunner> bucketsWriteThreadMap = new ConcurrentHashMap<>(120);
 
+    public Map<String, PageCacheWriteRunner> getBucketsWriteThreadMap() {
+        return bucketsWriteThreadMap;
+    }
 //    private static final ThreadPoolExecutor executor = PageCacheWritePoolManager.getThreadPool();
 
     //使用： getBucketWriteQueue().productWriteUnit(writeUnit);
@@ -37,8 +39,8 @@ public class PageCacheWriteUnitQueueManager {
                 PageCacheWriteUnitQueue queue = new PageCacheWriteUnitQueue(isTopic);
                 runner = new PageCacheWriteRunner(queue, bucket, filePath);
                 bucketsWriteThreadMap.put(bucket, runner);
-                executor.execute(runner);
-                //runner.start();
+                //executor.execute(runner);
+                runner.start();
             }
 //            PageCacheWriteUnitQueue queue = bucketsWriteQueueMap.get(bucket);
 //            if (queue == null) {

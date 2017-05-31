@@ -36,7 +36,9 @@ public class PageCacheReadUnitQueue {
 //        }
 
         while (queue.isEmpty()) {
-            if (isFinish) {
+            if (!isFinish) {
+                Thread.sleep(100);
+            } else {
                 return null;
             }
         }
