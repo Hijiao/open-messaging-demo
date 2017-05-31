@@ -56,6 +56,6 @@ public class PageCacheReadUnitQueue {
     }
 
     public boolean isTopic() {
-        return isTopic;
+        return this.isTopic;
     }
 }

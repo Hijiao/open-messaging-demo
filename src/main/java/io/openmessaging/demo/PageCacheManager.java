@@ -199,7 +199,7 @@ public class PageCacheManager {
         int pageSize = (isTopic ? BIG_WRITE_PAGE_SIZE : SMALL_WRITE_PAGE_SIZE);
 
         StringBuilder builder = new StringBuilder();
-        builder.append(storePath).append(File.separator).append(bucket).append("_").append(String.format("%03d", index));
+        builder.append(storePath).append(File.separator).append(bucket).append("_").append(isTopic).append("_").append(String.format("%03d", index));
         try {
             RandomAccessFile randAccessFile = new RandomAccessFile(new File(builder.toString()), "rw");
             MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_WRITE, 0, pageSize);
@@ -213,7 +213,7 @@ public class PageCacheManager {
     private MappedByteBuffer createNewPageToRead(int index) {
         StringBuilder builder = new StringBuilder();
         int pageSize = (isTopic ? BIG_WRITE_PAGE_SIZE : SMALL_WRITE_PAGE_SIZE);
-        builder.append(storePath).append(File.separator).append(bucket).append("_").append(String.format("%03d", index));
+        builder.append(storePath).append(File.separator).append(bucket).append("_").append(isTopic).append("_").append(String.format("%03d", index));
         try {
             RandomAccessFile randAccessFile = new RandomAccessFile(new File(builder.toString()), "r");
             MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, pageSize);

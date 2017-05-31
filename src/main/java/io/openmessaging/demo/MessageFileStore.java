@@ -90,6 +90,10 @@ public class MessageFileStore {
             if (beforeWriteBodyList.isEmpty()) {
                 runner.getQueue().setFinish(true);
             } else {
+
+                //TODO 当总数小于批次数时，queue一直未被初始化，flush会报错
+//                PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(entry.getKey(), isTopic);
+
                 PageCacheWriteUnitQueue queue = runner.getQueue();
                 sendBatchMessageToQueue(beforeWriteBodyList, queue);
                 queue.setFinish(true);
@@ -104,7 +108,7 @@ public class MessageFileStore {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        System.out.println("all write threads exit");
+        System.out.println("all write threads  exit");
 
     }
 }

@@ -59,14 +59,18 @@ public class ProducerTester {
         public void run() {
             while (true) {
                 try {
+                    Message message;
                     String queueOrTopic;
                     if (sendNum % 10 == 0) {
                         queueOrTopic = "QUEUE_" + random.nextInt(10);
+                        message = producer.createBytesMessageToQueue(queueOrTopic, (label + "_" + offsets.get(queueOrTopic)).getBytes());
+
                         //queueOrTopic = "QUEUE_" + random.nextInt(10);
                     } else {
                         queueOrTopic = "TOPIC_" + random.nextInt(10);
+                        message = producer.createBytesMessageToTopic(queueOrTopic, (label + "_" + offsets.get(queueOrTopic)).getBytes());
+
                     }
-                    Message message = producer.createBytesMessageToQueue(queueOrTopic, (label + "_" + offsets.get(queueOrTopic)).getBytes());
                     logger.debug("queueOrTopic:{} offset:{}", queueOrTopic, label + "_" + offsets.get(queueOrTopic));
                     offsets.put(queueOrTopic, offsets.get(queueOrTopic) + 1);
                     producer.send(message);
@@ -105,6 +109,6 @@ public class ProducerTester {
         }
 
         long end = System.currentTimeMillis();
-        logger.info("Produce Finished, Cost {} ms,tps {}", end - start, Constants.PRO_MAX / (end - start));
+        logger.info("Produce Finished {} , Cost {} ms,tps {}", Constants.PRO_MAX, end - start, Constants.PRO_MAX / (end - start));
     }
 }

@@ -1,7 +1,7 @@
 package io.openmessaging.demo;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by Max on 2017/5/23.
@@ -24,7 +24,7 @@ public class PageCacheWriteUnitQueueManager {
 
     //    private static final Map<String, PageCacheWriteUnitQueue> bucketsWriteQueueMap = new ConcurrentHashMap<>();
 //    private static final Map<String, PageCacheWriteUnitQueue> bucketsWriteQueueMap = new ConcurrentHashMap<>();
-    private static final Map<String, PageCacheWriteRunner> bucketsWriteThreadMap = new ConcurrentHashMap<>(120);
+    private static final Map<String, PageCacheWriteRunner> bucketsWriteThreadMap = new HashMap<>(120);
 
     public Map<String, PageCacheWriteRunner> getBucketsWriteThreadMap() {
         return bucketsWriteThreadMap;
@@ -36,6 +36,7 @@ public class PageCacheWriteUnitQueueManager {
         synchronized (bucketsWriteThreadMap) {
             PageCacheWriteRunner runner = bucketsWriteThreadMap.get(bucket);
             if (runner == null) {
+                // System.out.println("create new writeUnitQueue :" + bucket + "  isTopic:" + isTopic);
                 PageCacheWriteUnitQueue queue = new PageCacheWriteUnitQueue(isTopic);
                 runner = new PageCacheWriteRunner(queue, bucket, filePath);
                 bucketsWriteThreadMap.put(bucket, runner);

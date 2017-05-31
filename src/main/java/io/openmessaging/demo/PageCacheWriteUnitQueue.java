@@ -35,7 +35,7 @@ public class PageCacheWriteUnitQueue {
     }
 
     public boolean isTopic() {
-        return isTopic;
+        return this.isTopic;
     }
 
     public void setTopic(boolean topic) {

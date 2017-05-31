@@ -8,7 +8,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class DemoTester {
-    private static final int MESSAGE_LENGTH = 300;
+    private static final int MESSAGE_LENGTH = 1500;
 
     public static void main(String[] args) {
         KeyValue properties = new DefaultKeyValue();
@@ -98,6 +98,7 @@ public class DemoTester {
             }
             long endConsumer = System.currentTimeMillis();
             long T2 = endConsumer - startConsumer;
+            producer.flush();
             System.out.println(String.format("Team1 cost:%d ms tps:%d q/ms", T2 + T1, (queue1Offset + topic1Offset)/(T1 + T2)));
 
         }
