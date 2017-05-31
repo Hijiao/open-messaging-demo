@@ -35,7 +35,7 @@ public class PageCacheReadUnitQueueManager {
 
 
     //使用：getBucketReadUnitQueue.consumeReadBody;
-    public static PageCacheReadUnitQueue getBucketReadUnitQueue(String bucket, boolean isTopic) {
+    public static PageCacheReadUnitQueue getBucketReadUnitQueue(String bucket) {
         return bucketsReadQueueMap.get(bucket);
     }
 }

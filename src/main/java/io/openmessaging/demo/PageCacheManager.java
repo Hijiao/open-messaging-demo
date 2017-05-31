@@ -122,9 +122,15 @@ public class PageCacheManager {
     boolean hasPackagedOneMessage = false;
     boolean finishFlag = false;
 
-    public DefaultBytesMessage readMessage() {
-        hasPackagedOneMessage = false;
+    DefaultBytesMessage message;
+    byte currByte;
+    byte[] keyBytes;
 
+    public DefaultBytesMessage readMessage() {
+
+        //TODO 拼接message头的工作在这里完成
+        message = DefaultMessageFactory.createByteMessage(bucket, isTopic);
+        hasPackagedOneMessage = false;
         if (currPage == null && currPageNumber == -1) {
             currPage = createNewPageToRead(++currPageNumber);
         }
@@ -133,12 +139,6 @@ public class PageCacheManager {
         }
         byteBuffer.clear();
         currPageRemaining = currPage.remaining();
-        byte currByte;
-        byte[] keyBytes;
-
-
-        DefaultBytesMessage message = new DefaultBytesMessage();
-
         while ((!hasPackagedOneMessage) && (!finishFlag)) {
             currByte = getNextByteFromCurrPage();
             if (currByte != MARKER_PREFIX) {
@@ -160,6 +160,9 @@ public class PageCacheManager {
                         byteBuffer.get(keyBytes);
                         value = new String(keyBytes);
                         message.putHeaders(key, value);
+                        key = null;
+                        value = null;
+
                         break;
                     case PRO_KEY_END_MARKER:
                         keyBytes = new byte[byteBuffer.position()];
@@ -173,6 +176,8 @@ public class PageCacheManager {
                         byteBuffer.get(keyBytes);
                         value = new String(keyBytes);
                         message.putProperties(key, value);
+                        key = null;
+                        value = null;
                         break;
                     case MESSAGE_END_MARKER:
                         body = new byte[byteBuffer.position()];
@@ -180,6 +185,7 @@ public class PageCacheManager {
                         byteBuffer.get(body);
                         message.setBody(body);
                         hasPackagedOneMessage = true;
+                        body = null;
                         break;
                     case MARKER_PREFIX:
                         finishFlag = true;
@@ -267,6 +273,26 @@ public class PageCacheManager {
         }
     }
 
+    static class Testclass {
+        private String s;
+
+        public Testclass(String sz) {
+            s = sz;
+        }
+
+        public String gets() {
+            return s;
+        }
+    }
+
+    public static void main(String[] args) {
+        String ss = "a";
+        Testclass t = new Testclass(ss);
+        ss = "b";
+        System.out.println(t.gets());
+
+
+    }
 
 }
 

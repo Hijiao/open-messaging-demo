@@ -56,8 +56,8 @@ public class MessageFileStore {
     }
 
 
-    public Message pullMessage(boolean isTopic, String bucket) {
-        PageCacheReadUnitQueue readUnitQueue = readUnitQueueManager.getBucketReadUnitQueue(bucket, isTopic);
+    public Message pullMessage(String bucket) {
+        PageCacheReadUnitQueue readUnitQueue = readUnitQueueManager.getBucketReadUnitQueue(bucket);
         DefaultBytesMessage message = null;
         try {
             message = readUnitQueue.consumeReadBody();

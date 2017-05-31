@@ -17,7 +17,7 @@ public class DefaultBytesMessage implements BytesMessage {
     }
 
     public DefaultBytesMessage() {
-        this.body = body;
+
     }
 
     @Override

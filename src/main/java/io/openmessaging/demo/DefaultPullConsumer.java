@@ -4,19 +4,19 @@ import io.openmessaging.KeyValue;
 import io.openmessaging.Message;
 import io.openmessaging.PullConsumer;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 public class DefaultPullConsumer implements PullConsumer {
     private MessageFileStore messageStore = MessageFileStore.getInstance();
     private KeyValue properties;
     private String queue;
-    private Set<String> buckets = new HashSet<>();
-    private List<String> bucketList = new ArrayList<>();
+    private Set<String> topics = new HashSet<>();
 
-    private PageCacheReadUnitQueueManager readQueueManager = PageCacheReadUnitQueueManager.getInstance();
     public DefaultPullConsumer(KeyValue properties) {
         this.properties = properties;
-        readQueueManager.setFilePath(properties.getString("STORE_PATH"));
+        PageCacheReadUnitQueueManager.getInstance().setFilePath(properties.getString("STORE_PATH"));
     }
 
 
@@ -28,20 +28,20 @@ public class DefaultPullConsumer implements PullConsumer {
 
     @Override
     public Message poll() {
-        if (buckets.size() == 0 || queue == null) {
-            return null;
-        }
-        Message message = messageStore.pullMessage(false, queue);
+//        if (topics.size() == 0 || queue == null) {
+//            return null;
+//        }
+        Message message = messageStore.pullMessage(queue);
         if (message != null) {
             return message;
         }
-
-        for (int i = 0; i < bucketList.size(); i++) {
-            message = messageStore.pullMessage(true, bucketList.get(i));
+        for (String topic : topics) {
+            message = messageStore.pullMessage(topic);
             if (message != null) {
                 return message;
             }
         }
+
         return null;
     }
 
@@ -65,17 +65,18 @@ public class DefaultPullConsumer implements PullConsumer {
         if (queue != null && !queue.equals(queueName)) {
             throw new ClientOMSException("You have alreadly attached to a queue " + queue);
         }
-        readQueueManager.intPageCacheReadUnitQueu(queueName, false);
-
-        for (String topic : topics) {
-            readQueueManager.intPageCacheReadUnitQueu(topic, true);
-        }
 
         queue = queueName;
-        //buckets.add(queueName);
-        buckets.addAll(topics);
-        bucketList.clear();
-        bucketList.addAll(buckets);
+        //topics.add(queueName);
+        this.topics.addAll(topics);
+
+        PageCacheReadUnitQueueManager.intPageCacheReadUnitQueu(queueName, false);
+
+        for (String topic : topics) {
+            PageCacheReadUnitQueueManager.intPageCacheReadUnitQueu(topic, true);
+        }
+
+
     }
 
 

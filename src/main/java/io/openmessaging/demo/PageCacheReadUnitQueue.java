@@ -1,7 +1,5 @@
 package io.openmessaging.demo;
 
-import io.openmessaging.MessageHeader;
-
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -12,6 +10,7 @@ public class PageCacheReadUnitQueue {
     private boolean isTopic;
     private boolean isFinish = false;
     private String bucketName;
+    private DefaultBytesMessage message;
 
     public PageCacheReadUnitQueue(String bucketName, boolean isTopic) {
         this.isTopic = isTopic;
@@ -42,12 +41,12 @@ public class PageCacheReadUnitQueue {
                 return null;
             }
         }
-        DefaultBytesMessage message = queue.poll();
-        if (isTopic) {
-            message.putHeaders(MessageHeader.TOPIC, bucketName);
-        } else {
-            message.putHeaders(MessageHeader.QUEUE, bucketName);
-        }
+        message = queue.poll();
+//        if (isTopic) {
+//            message.putHeaders(MessageHeader.TOPIC, bucketName);
+//        } else {
+//            message.putHeaders(MessageHeader.QUEUE, bucketName);
+//        }
         return message;
     }
 
