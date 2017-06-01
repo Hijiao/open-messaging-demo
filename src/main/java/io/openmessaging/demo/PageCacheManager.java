@@ -22,9 +22,17 @@ public class PageCacheManager {
 
     //TODO 批量移动buffer http://www.cnblogs.com/lxzh/archive/2013/05/10/3071680.html
 
+    MappedByteBuffer currPage = null;
+    int currPageRemaining;
+    boolean hasPackagedOneMessage = false;
+    boolean finishFlag = false;
     private String storePath;
     private String bucket;
     private boolean isTopic;
+    private ByteBuffer byteBuffer = ByteBuffer.allocate(1024 * 300);//消息大小最大256kb
+    private byte[] byteArray = new byte[1024 * 256];
+    private int currPageNumber = -1;
+
 
     public PageCacheManager(String bucket, String storePath, boolean isTopic) {
         this.bucket = bucket;
@@ -32,26 +40,50 @@ public class PageCacheManager {
         this.isTopic = isTopic;
     }
 
-    private ByteBuffer byteBuffer = ByteBuffer.allocate(1024 * 300);//消息大小最大256kb
-    private byte[] byteArray = new byte[1024 * 256];
+    public static void unmap(final MappedByteBuffer mappedByteBuffer) {
+        try {
+            if (mappedByteBuffer == null) {
+                return;
+            }
+            //mappedByteBuffer.force();
+            AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                @SuppressWarnings("restriction")
+                public Object run() {
+                    try {
+                        Method getCleanerMethod = mappedByteBuffer.getClass().getMethod("cleaner", new Class[0]);
+                        getCleanerMethod.setAccessible(true);
+                        sun.misc.Cleaner cleaner =
+                                (sun.misc.Cleaner) getCleanerMethod.invoke(mappedByteBuffer, new Object[0]);
+                        cleaner.clean();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                }
+            });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        String ss = "a";
+        Testclass t = new Testclass(ss);
+        ss = "b";
+        System.out.println(t.gets());
 
 
-    private int currPageNumber = -1;
-    MappedByteBuffer currPage = null;
-    int currPageRemaining;
-
-
-    String key;
-    String value;
-    byte[] body;
-    Set<Map.Entry<String, Object>> entrySet;
+    }
 
     public void writeMessage(DefaultBytesMessage message) {
+        String key;
         byteBuffer.clear();
         if (currPage == null) {
             currPage = createNewPageToWrite(++currPageNumber);
         }
-        entrySet = ((DefaultKeyValue) message.headers()).getMap().entrySet();
+        Set<Map.Entry<String, Object>> entrySet = ((DefaultKeyValue) message.headers()).getMap().entrySet();
         if (entrySet.size() != 1) {
             for (Map.Entry<String, Object> kv : entrySet) {
                 key = kv.getKey();
@@ -102,7 +134,6 @@ public class PageCacheManager {
 
     }
 
-
     private byte getNextByteFromCurrPage() {
 
         if (currPage != null) {
@@ -120,18 +151,13 @@ public class PageCacheManager {
         return currPage.get();
     }
 
-    boolean hasPackagedOneMessage = false;
-    boolean finishFlag = false;
-
-    DefaultBytesMessage message;
-    byte currByte;
-    byte[] keyBytes;
-
     public DefaultBytesMessage readMessage() {
         int byteArrayLen = 0;
 
+        String key = null;
+
         //TODO 拼接message头的工作在这里完成
-        message = DefaultMessageFactory.createByteMessage(bucket, isTopic);
+        DefaultBytesMessage message = DefaultMessageFactory.createByteMessage(bucket, isTopic);
         hasPackagedOneMessage = false;
         if (currPage == null && currPageNumber == -1) {
             currPage = createNewPageToRead(++currPageNumber);
@@ -141,7 +167,7 @@ public class PageCacheManager {
         }
         currPageRemaining = currPage.remaining();
         while ((!hasPackagedOneMessage) && (!finishFlag)) {
-            currByte = getNextByteFromCurrPage();
+            byte currByte = getNextByteFromCurrPage();
             if (currByte != MARKER_PREFIX) {
                 if (currByte == 0x00) {
                     return null;
@@ -166,7 +192,6 @@ public class PageCacheManager {
                     case MESSAGE_END_MARKER:
                         message.setBody(new String(byteArray, 0, byteArrayLen).getBytes());
                         hasPackagedOneMessage = true;
-                        body = null;
                         break;
                     case MARKER_PREFIX:
                         finishFlag = true;
@@ -181,7 +206,6 @@ public class PageCacheManager {
         }
         return null;
     }
-
 
     private MappedByteBuffer createNewPageToWrite(int index) {
         int pageSize = (isTopic ? BIG_WRITE_PAGE_SIZE : SMALL_WRITE_PAGE_SIZE);
@@ -212,7 +236,6 @@ public class PageCacheManager {
         }
     }
 
-
     public void closeCurrPage() {
         try {
 //            MappedByteBuffer page = bucketPageList.getLast();
@@ -222,34 +245,6 @@ public class PageCacheManager {
             getCleanerMethod.setAccessible(true);
             sun.misc.Cleaner cleaner = (sun.misc.Cleaner) getCleanerMethod.invoke(currPage, new Object[0]);
             cleaner.clean();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void unmap(final MappedByteBuffer mappedByteBuffer) {
-        try {
-            if (mappedByteBuffer == null) {
-                return;
-            }
-            //mappedByteBuffer.force();
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                @SuppressWarnings("restriction")
-                public Object run() {
-                    try {
-                        Method getCleanerMethod = mappedByteBuffer.getClass().getMethod("cleaner", new Class[0]);
-                        getCleanerMethod.setAccessible(true);
-                        sun.misc.Cleaner cleaner =
-                                (sun.misc.Cleaner) getCleanerMethod.invoke(mappedByteBuffer, new Object[0]);
-                        cleaner.clean();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    return null;
-                }
-            });
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -265,15 +260,6 @@ public class PageCacheManager {
         public String gets() {
             return s;
         }
-    }
-
-    public static void main(String[] args) {
-        String ss = "a";
-        Testclass t = new Testclass(ss);
-        ss = "b";
-        System.out.println(t.gets());
-
-
     }
 
 }
