@@ -32,12 +32,19 @@ public class MessageFileStore {
             beforeWriteBodyMap.put(bucket, new ConcurrentLinkedQueue<>());
             writeQueueManager.intBucketWriteQueue(bucket, isTopic);
         }
-        Queue<DefaultBytesMessage> beforeWriteBodyQueue = beforeWriteBodyMap.get(bucket);
-        beforeWriteBodyQueue.add((DefaultBytesMessage) message);
-        if (beforeWriteBodyQueue.size() > Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE) {
-            PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket);
-            sendBatchMessageToQueue(beforeWriteBodyQueue, queue);
+//        Queue<DefaultBytesMessage> beforeWriteBodyQueue = beforeWriteBodyMap.get(bucket);
+//        beforeWriteBodyQueue.add((DefaultBytesMessage) message);
+        PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket);
+
+        try {
+            queue.putMessageInWriteQueue((DefaultBytesMessage) message);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
+//        if (beforeWriteBodyQueue.size() > Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE) {
+//            PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket);
+//            sendBatchMessageToQueue(beforeWriteBodyQueue, queue);
+//        }
 
     }
 
@@ -46,7 +53,6 @@ public class MessageFileStore {
         try {
             while (!beforeWriteBodyQueue.isEmpty()) {
                 queue.putMessageInWriteQueue(beforeWriteBodyQueue.poll());
-
             }
 
             beforeWriteBodyQueue.clear();
@@ -101,6 +107,7 @@ public class MessageFileStore {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        System.gc();
         System.out.println("all write threads  exit");
 
     }

@@ -35,7 +35,7 @@ public class PageCacheWriteRunner extends Thread {
 
     private void freeCacheManager() {
         this.cacheManager = null;
-        System.gc();
+        //System.gc();
     }
 
     public PageCacheManager getCacheManager() {
