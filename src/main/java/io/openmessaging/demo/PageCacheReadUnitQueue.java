@@ -10,7 +10,7 @@ public class PageCacheReadUnitQueue {
     private boolean isTopic;
     private boolean isFinish = false;
     private String bucketName;
-    private DefaultBytesMessage message;
+    // private DefaultBytesMessage message;
 
     public PageCacheReadUnitQueue(String bucketName, boolean isTopic) {
         this.isTopic = isTopic;
@@ -20,8 +20,13 @@ public class PageCacheReadUnitQueue {
     private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue();
 
 
+    /**
+     * take()方法和put()方法是对应的，从中拿一个数据，如果拿不到线程挂起
+     * poll()方法和offer()方法是对应的，从中拿一个数据，如果没有直接返回null
+     */
+
     public void productReadBody(DefaultBytesMessage message) throws InterruptedException {
-        queue.put(message);
+        queue.offer(message);
         // queue.offer(messageBody);
     }
 
@@ -41,13 +46,13 @@ public class PageCacheReadUnitQueue {
                 return null;
             }
         }
-        message = queue.poll();
+        return queue.poll();
 //        if (isTopic) {
 //            message.putHeaders(MessageHeader.TOPIC, bucketName);
 //        } else {
 //            message.putHeaders(MessageHeader.QUEUE, bucketName);
 //        }
-        return message;
+        //return message;
     }
 
     public void setFinish(boolean finish) {
