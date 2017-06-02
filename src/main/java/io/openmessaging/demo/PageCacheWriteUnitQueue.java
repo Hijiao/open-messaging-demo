@@ -26,7 +26,7 @@ public class PageCacheWriteUnitQueue {
         //return queue.take();
         while (queue.isEmpty()) {
             if (!isFinish) {
-                Thread.sleep(100);
+                Thread.sleep(10);
             } else {
                 return null;
             }

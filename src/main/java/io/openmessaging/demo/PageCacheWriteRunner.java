@@ -14,7 +14,7 @@ public class PageCacheWriteRunner extends Thread {
         this.queue = queue;
         this.queueBucketName = queueBucketName;
         this.cacheManager = new PageCacheManager(queueBucketName, storePath, queue.isTopic());
-        System.out.println("init new  write_thread：" + queueBucketName);
+        //System.out.println("init new  write_thread：" + queueBucketName);
 
     }
 

@@ -106,6 +106,6 @@ public class DefaultBytesMessage implements BytesMessage {
                 "headers={" + headers +
                 "}, properties={" + properties +
                 "}, body={" + Arrays.toString(body) +
-                "}}";
+                "}:{" + new String(body) + "}}";
     }
 }

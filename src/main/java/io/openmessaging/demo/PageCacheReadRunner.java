@@ -10,40 +10,40 @@ import static io.openmessaging.demo.Constants.*;
  * Created by Max on 2017/5/28.
  */
 public class PageCacheReadRunner extends Thread {
-    private PageCacheReadUnitQueue queue;
-    private PageCacheReaderManager cacheManager;
-    private LinkedBlockingQueue<ByteBuffer> emptyByteBuffers = null;
-    private LinkedBlockingQueue<ByteBuffer> fullByteBuffers = null;
-    private String queueBucketName;
-    private boolean isTopic;
+    PageCacheReadUnitQueue queue;
+    PageCacheReaderManager pageCacheReaderManager;
+    LinkedBlockingQueue<ByteBuffer> emptyByteBuffers = null;
+    LinkedBlockingQueue<ByteBuffer> fullByteBuffers = null;
+    String queueBucketName;
+    boolean isTopic;
     //此处没法用allocateDirectory。。。
-    private ByteBuffer tmpByteBuffer = ByteBuffer.allocate(Constants.BYTE_BUFFER_SIZE);
+    ByteBuffer tmpByteBuffer = ByteBuffer.allocate(Constants.BYTE_BUFFER_SIZE);
 
 
 
     public PageCacheReadRunner(PageCacheReadUnitQueue queue, String queueBucketName, String storePath) {
-        this.isTopic = queue.isTopic();
+        isTopic = queue.isTopic();
         this.queue = queue;
         this.queueBucketName = queueBucketName;
-        this.cacheManager = new PageCacheReaderManager(queueBucketName, storePath, queue.isTopic());
-        this.emptyByteBuffers = cacheManager.getEmptyByteBuffers();
-        this.fullByteBuffers = cacheManager.getFullByteBuffers();
-        System.out.println("init new read_thread： " + queueBucketName);
-        Thread.currentThread().setName(queueBucketName);
-        cacheManager.start();
-//        cacheManager.isInterrupted();
+        this.pageCacheReaderManager = new PageCacheReaderManager(queueBucketName, storePath, queue.isTopic());
+        this.emptyByteBuffers = pageCacheReaderManager.getEmptyByteBuffers();
+        this.fullByteBuffers = pageCacheReaderManager.getFullByteBuffers();
+        //System.out.println("init new read_thread： " + queueBucketName);
+        //  Thread.currentThread().setName(queueBucketName);
+        pageCacheReaderManager.start();
+//        pageCacheReaderManager.isInterrupted();
     }
 
     public void run() {
         try {
             while (true) {
                 while (fullByteBuffers.isEmpty()) {
-                    if (cacheManager.isAlive()) {
+                    if (pageCacheReaderManager.isAlive()) {
 //                Thread.sleep(1000);
                     } else {
                         queue.setFinish(true);
                         this.queue = null;
-                        this.cacheManager = null;
+                        this.pageCacheReaderManager = null;
                         break;
                     }
                 }
@@ -56,7 +56,7 @@ public class PageCacheReadRunner extends Thread {
 
 //            while (message != null) {
 //                queue.productReadBody(message);
-//                message = cacheManager.readMessageFromFileToByteBuffer();
+//                message = pageCacheReaderManager.readMessageFromFileToByteBuffer();
 //            }
             // queue.setFinish(true);
         } catch (InterruptedException e) {

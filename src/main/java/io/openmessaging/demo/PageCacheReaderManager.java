@@ -130,8 +130,10 @@ public class PageCacheReaderManager extends Thread {
             } else {
                 unmap(currPage);
                 // closeCurrPage();
-                currPage = createNewPageToRead(++currPageNumber);
+                currPage = null;
                 System.gc();
+                currPage = createNewPageToRead(++currPageNumber);
+
             }
         }
         if (currPage == null)

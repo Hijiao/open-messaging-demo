@@ -17,7 +17,7 @@ public class PageCacheReadUnitQueue {
         this.bucketName = bucketName;
     }
 
-    private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue();
+    private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue(Constants.BYTE_BUFFER_NUMBER_IN_QUEUE);
 
 
     /**
@@ -26,7 +26,7 @@ public class PageCacheReadUnitQueue {
      */
 
     public void productReadBody(DefaultBytesMessage message) throws InterruptedException {
-        queue.offer(message);
+        queue.put(message);
         // queue.offer(messageBody);
     }
 
