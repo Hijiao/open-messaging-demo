@@ -120,6 +120,8 @@ public class PageCacheManager {
                 currPage.put(byteBuffer.get());
             }
             unmap(currPage);
+            currPage = null;
+            System.gc();
 //            closeCurrPage();
             currPage = createNewPageToWrite(++currPageNumber);
             System.gc();
@@ -134,78 +136,7 @@ public class PageCacheManager {
 
     }
 
-    private byte getNextByteFromCurrPage() {
 
-        if (currPage != null) {
-            if (currPage.hasRemaining()) {
-                return currPage.get();
-            } else {
-                unmap(currPage);
-                // closeCurrPage();
-                currPage = createNewPageToRead(++currPageNumber);
-                System.gc();
-            }
-        }
-        if (currPage == null)
-            return MARKER_PREFIX;//连着返回两次，则认为文件读取结束
-        return currPage.get();
-    }
-
-    public DefaultBytesMessage readMessage() {
-        int byteArrayLen = 0;
-
-        String key = null;
-
-        //TODO 拼接message头的工作在这里完成
-        DefaultBytesMessage message = DefaultMessageFactory.createByteMessage(bucket, isTopic);
-        hasPackagedOneMessage = false;
-        if (currPage == null && currPageNumber == -1) {
-            currPage = createNewPageToRead(++currPageNumber);
-        }
-        if (currPage == null) {
-            return null;
-        }
-        currPageRemaining = currPage.remaining();
-        while ((!hasPackagedOneMessage) && (!finishFlag)) {
-            byte currByte = getNextByteFromCurrPage();
-            if (currByte != MARKER_PREFIX) {
-                if (currByte == 0x00) {
-                    return null;
-                }
-                byteArray[byteArrayLen++] = currByte;
-            } else {
-                switch (getNextByteFromCurrPage()) {
-                    case HEADER_KEY_END_MARKER:
-                        key = new String(byteArray, 0, byteArrayLen);
-                        break;
-                    case HEADER_VALUE_END_MARKER:
-                        message.putHeaders(key, new String(byteArray, 0, byteArrayLen));
-                        key = null;
-                        break;
-                    case PRO_KEY_END_MARKER:
-                        key = new String(byteArray, 0, byteArrayLen);
-                        break;
-                    case PRO_VALUE_END_MARKER:
-                        message.putProperties(key, new String(byteArray, 0, byteArrayLen));
-                        key = null;
-                        break;
-                    case MESSAGE_END_MARKER:
-                        message.setBody(new String(byteArray, 0, byteArrayLen).getBytes());
-                        hasPackagedOneMessage = true;
-                        break;
-                    case MARKER_PREFIX:
-                        finishFlag = true;
-                        break;
-                }
-                byteArrayLen = 0;
-            }
-        }
-        if (hasPackagedOneMessage) {
-            // System.out.println(message);
-            return message;
-        }
-        return null;
-    }
 
     private MappedByteBuffer createNewPageToWrite(int index) {
         int pageSize = (isTopic ? BIG_WRITE_PAGE_SIZE : SMALL_WRITE_PAGE_SIZE);
@@ -222,33 +153,20 @@ public class PageCacheManager {
         }
     }
 
-    private MappedByteBuffer createNewPageToRead(int index) {
-        StringBuilder builder = new StringBuilder();
-        int pageSize = (isTopic ? BIG_WRITE_PAGE_SIZE : SMALL_WRITE_PAGE_SIZE);
-        builder.append(storePath).append(File.separator).append(bucket).append("_").append(isTopic).append("_").append(String.format("%03d", index));
-        try {
-            RandomAccessFile randAccessFile = new RandomAccessFile(new File(builder.toString()), "r");
-            MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, pageSize);
-            return newPage;
-        } catch (Exception e) {
-            //e.printStackTrace();
-            return null;
-        }
-    }
 
-    public void closeCurrPage() {
-        try {
-//            MappedByteBuffer page = bucketPageList.getLast();
-//            page.force();
-
-            Method getCleanerMethod = currPage.getClass().getMethod("cleaner", new Class[0]);
-            getCleanerMethod.setAccessible(true);
-            sun.misc.Cleaner cleaner = (sun.misc.Cleaner) getCleanerMethod.invoke(currPage, new Object[0]);
-            cleaner.clean();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+//    public void closeCurrPage() {
+//        try {
+////            MappedByteBuffer page = bucketPageList.getLast();
+////            page.force();
+//
+//            Method getCleanerMethod = currPage.getClass().getMethod("cleaner", new Class[0]);
+//            getCleanerMethod.setAccessible(true);
+//            sun.misc.Cleaner cleaner = (sun.misc.Cleaner) getCleanerMethod.invoke(currPage, new Object[0]);
+//            cleaner.clean();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     static class Testclass {
         private String s;
@@ -259,6 +177,16 @@ public class PageCacheManager {
 
         public String gets() {
             return s;
+        }
+    }
+
+    protected void finalize() {
+        unmap(this.currPage);
+        currPage = null;
+        try {
+            super.finalize();
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
         }
     }
 
