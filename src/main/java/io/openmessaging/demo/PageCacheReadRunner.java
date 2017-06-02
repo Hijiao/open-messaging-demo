@@ -16,8 +16,9 @@ public class PageCacheReadRunner extends Thread {
     private LinkedBlockingQueue<ByteBuffer> fullByteBuffers = null;
     private String queueBucketName;
     private boolean isTopic;
+    //此处没法用allocateDirectory。。。
+    private ByteBuffer tmpByteBuffer = ByteBuffer.allocate(Constants.BYTE_BUFFER_SIZE);
 
-    private byte[] byteArray = new byte[Constants.BYTE_BUFFER_SIZE];
 
 
     public PageCacheReadRunner(PageCacheReadUnitQueue queue, String queueBucketName, String storePath) {
@@ -41,6 +42,8 @@ public class PageCacheReadRunner extends Thread {
 //                Thread.sleep(1000);
                     } else {
                         queue.setFinish(true);
+                        this.queue = null;
+                        this.cacheManager = null;
                         break;
                     }
                 }
@@ -66,7 +69,6 @@ public class PageCacheReadRunner extends Thread {
     public DefaultBytesMessage readMessageFromByteBuffer(ByteBuffer byteBuffer) {
 //        System.out.println("byteBuffer in readMessageFromByteBuffer" + byteBuffer.toString());
 
-        int byteArrayLen = 0;
 
         String key = null;
 
@@ -76,36 +78,44 @@ public class PageCacheReadRunner extends Thread {
         byteBuffer.rewind();
 
         while ((!hasPackagedOneMessage) && (byteBuffer.hasRemaining())) {
+
             byte currByte = byteBuffer.get();
 //            System.out.print(new String(new byte[]{currByte}));
             if (currByte != MARKER_PREFIX) {
-                byteArray[byteArrayLen++] = currByte;
+                tmpByteBuffer.put(currByte);
+                //byteArray[byteArrayLen++] = currByte;
             } else {
                 byte byteType = byteBuffer.get();
 //                System.out.print(new String(new byte[]{byteType}));
                 switch (byteType) {
                     case HEADER_KEY_END_MARKER:
-                        key = new String(byteArray, 0, byteArrayLen);
+                        //tmpByteBuffer.flip();
+                        key = new String(tmpByteBuffer.array(), 0, tmpByteBuffer.position());
                         break;
                     case HEADER_VALUE_END_MARKER:
-                        message.putHeaders(key, new String(byteArray, 0, byteArrayLen));
+                        message.putHeaders(key, new String(tmpByteBuffer.array(), 0, tmpByteBuffer.position()));
                         key = null;
                         break;
                     case PRO_KEY_END_MARKER:
-                        key = new String(byteArray, 0, byteArrayLen);
+                        key = new String(tmpByteBuffer.array(), 0, tmpByteBuffer.position());
                         break;
                     case PRO_VALUE_END_MARKER:
-                        message.putProperties(key, new String(byteArray, 0, byteArrayLen));
+                        message.putProperties(key, new String(tmpByteBuffer.array(), 0, tmpByteBuffer.position()));
                         key = null;
                         break;
                     case MESSAGE_END_MARKER:
-                        message.setBody(new String(byteArray, 0, byteArrayLen).getBytes());
+                        byte[] body = new byte[tmpByteBuffer.position()];
+                        tmpByteBuffer.rewind();
+                        tmpByteBuffer.get(body);
+                        message.setBody(body);
                         hasPackagedOneMessage = true;
+                        body = null;
                         break;
                 }
-                byteArrayLen = 0;
+                tmpByteBuffer.clear();
             }
         }
+
         if (hasPackagedOneMessage) {
             // System.out.println("message"+message);
             return message;

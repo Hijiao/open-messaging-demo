@@ -56,3 +56,5 @@
 
 [2017-06-02 10:37:43,304] Produce Finished, sendNum 40000000, Cost 146427 ms
 
+[2017-06-02 11:24:44,817] Produce Finished, sendNum 40000000, Cost 135550 ms
+
