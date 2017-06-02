@@ -1,0 +1,146 @@
+package io.openmessaging.demo;
+
+import java.io.File;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import static io.openmessaging.demo.Constants.*;
+import static io.openmessaging.demo.PageCacheManager.unmap;
+
+/**
+ * Created by Max on 2017/6/2.
+ */
+public class PageCacheReaderManager extends Thread {
+
+
+    MappedByteBuffer currPage = null;
+    int currPageRemaining;
+    boolean hasPackagedOneMessage = false;
+    boolean finishFlag = false;
+    private String storePath;
+    private String bucket;
+    private boolean isTopic;
+    private int currPageNumber = -1;
+
+    private boolean isReadFinished = false;
+
+    private LinkedBlockingQueue<ByteBuffer> emptyByteBuffers = new LinkedBlockingQueue<>(BYTE_BUFFER_NUMBER_IN_QUEUE);
+    private LinkedBlockingQueue<ByteBuffer> fullByteBuffers = new LinkedBlockingQueue<>(BYTE_BUFFER_NUMBER_IN_QUEUE);
+
+    public LinkedBlockingQueue<ByteBuffer> getEmptyByteBuffers() {
+        return emptyByteBuffers;
+    }
+
+    public LinkedBlockingQueue<ByteBuffer> getFullByteBuffers() {
+        return fullByteBuffers;
+    }
+
+    public PageCacheReaderManager(String bucket, String storePath, boolean isTopic) {
+        this.bucket = bucket;
+        this.storePath = storePath;
+        this.isTopic = isTopic;
+        for (int i = 0; i < BYTE_BUFFER_NUMBER_IN_QUEUE; i++) {
+            try {
+                emptyByteBuffers.put(ByteBuffer.allocateDirect(BYTE_BUFFER_SIZE));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void run() {
+        try {
+            while (true) {
+                ByteBuffer byteBuffer = emptyByteBuffers.take();
+                ByteBuffer fullByteBuffer = readMessageFromFileToByteBuffer(byteBuffer);
+                if (fullByteBuffer == null) {
+                    isReadFinished = true;
+                    break;
+                }
+                fullByteBuffers.put(fullByteBuffer);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+    public ByteBuffer readMessageFromFileToByteBuffer(ByteBuffer byteBuffer) {
+
+
+        //TODO 拼接message头的工作在这里完成
+        hasPackagedOneMessage = false;
+        if (currPage == null && currPageNumber == -1) {
+            currPage = createNewPageToRead(++currPageNumber);
+        }
+        if (currPage == null) {
+            return null;
+        }
+        currPageRemaining = currPage.remaining();
+        while ((!hasPackagedOneMessage) && (!finishFlag)) {
+            byte currByte = getNextByteFromCurrPage();
+            byteBuffer.put(currByte);
+            if (currByte != MARKER_PREFIX) {
+                if (currByte == 0x00) {
+                    return null;
+                }
+            } else {
+                switch (getNextByteFromCurrPage()) {
+                    case MESSAGE_END_MARKER:
+                        byteBuffer.put(MESSAGE_END_MARKER);
+                        hasPackagedOneMessage = true;
+                        break;
+                    case MARKER_PREFIX:
+                        finishFlag = true;
+                        byteBuffer.put(MARKER_PREFIX);
+                        break;
+                }
+            }
+        }
+        if (hasPackagedOneMessage) {
+            // System.out.println(message);
+            return byteBuffer;
+        }
+        return null;
+    }
+
+
+    private MappedByteBuffer createNewPageToRead(int index) {
+        StringBuilder builder = new StringBuilder();
+        int pageSize = (isTopic ? BIG_WRITE_PAGE_SIZE : SMALL_WRITE_PAGE_SIZE);
+        builder.append(storePath).append(File.separator).append(bucket).append("_").append(isTopic).append("_").append(String.format("%03d", index));
+        try {
+            RandomAccessFile randAccessFile = new RandomAccessFile(new File(builder.toString()), "r");
+            MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, pageSize);
+            return newPage;
+        } catch (Exception e) {
+            //e.printStackTrace();
+            return null;
+        }
+    }
+
+    private byte getNextByteFromCurrPage() {
+
+        if (currPage != null) {
+            if (currPage.hasRemaining()) {
+                return currPage.get();
+            } else {
+                unmap(currPage);
+                // closeCurrPage();
+                currPage = createNewPageToRead(++currPageNumber);
+                System.gc();
+            }
+        }
+        if (currPage == null)
+            return MARKER_PREFIX;//连着返回两次，则认为文件读取结束
+        return currPage.get();
+    }
+
+    public boolean isReadFinished() {
+        return isReadFinished;
+    }
+}
