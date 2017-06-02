@@ -41,6 +41,7 @@ public class PageCacheReadRunner extends Thread {
 //                Thread.sleep(1000);
                     } else {
                         queue.setFinish(true);
+                        break;
                     }
                 }
                 ByteBuffer byteBuffer = fullByteBuffers.take();
