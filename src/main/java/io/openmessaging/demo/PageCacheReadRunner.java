@@ -104,7 +104,9 @@ public class PageCacheReadRunner extends Thread {
                         key = null;
                         break;
                     case MESSAGE_END_MARKER:
-                        byte[] body = new byte[tmpByteBuffer.position()];
+                        int bodyLen = tmpByteBuffer.position();
+                        byte[] body = new byte[bodyLen];
+                        System.arraycopy(tmpByteBuffer.array(), 0, body, 0, bodyLen);
                         tmpByteBuffer.rewind();
                         tmpByteBuffer.get(body);
                         message.setBody(body);
