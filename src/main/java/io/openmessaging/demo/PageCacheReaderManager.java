@@ -71,7 +71,6 @@ public class PageCacheReaderManager extends Thread {
 
     public ByteBuffer readMessageFromFileToByteBuffer(ByteBuffer byteBuffer) {
 
-
         //TODO 拼接message头的工作在这里完成
         hasPackagedOneMessage = false;
         if (currPage == null && currPageNumber == -1) {
@@ -89,20 +88,20 @@ public class PageCacheReaderManager extends Thread {
                     return null;
                 }
             } else {
-                switch (getNextByteFromCurrPage()) {
+                byte byteType = getNextByteFromCurrPage();
+                byteBuffer.put(byteType);
+                switch (byteType) {
                     case MESSAGE_END_MARKER:
-                        byteBuffer.put(MESSAGE_END_MARKER);
                         hasPackagedOneMessage = true;
                         break;
                     case MARKER_PREFIX:
                         finishFlag = true;
-                        byteBuffer.put(MARKER_PREFIX);
                         break;
                 }
             }
         }
         if (hasPackagedOneMessage) {
-            // System.out.println(message);
+//            System.out.println(byteBuffer.toString());
             return byteBuffer;
         }
         return null;

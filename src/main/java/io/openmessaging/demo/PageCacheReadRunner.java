@@ -63,6 +63,8 @@ public class PageCacheReadRunner extends Thread {
 
 
     public DefaultBytesMessage readMessageFromByteBuffer(ByteBuffer byteBuffer) {
+//        System.out.println("byteBuffer in readMessageFromByteBuffer" + byteBuffer.toString());
+
         int byteArrayLen = 0;
 
         String key = null;
@@ -74,10 +76,13 @@ public class PageCacheReadRunner extends Thread {
 
         while ((!hasPackagedOneMessage) && (byteBuffer.hasRemaining())) {
             byte currByte = byteBuffer.get();
+//            System.out.print(new String(new byte[]{currByte}));
             if (currByte != MARKER_PREFIX) {
                 byteArray[byteArrayLen++] = currByte;
             } else {
-                switch (byteBuffer.get()) {
+                byte byteType = byteBuffer.get();
+//                System.out.print(new String(new byte[]{byteType}));
+                switch (byteType) {
                     case HEADER_KEY_END_MARKER:
                         key = new String(byteArray, 0, byteArrayLen);
                         break;
