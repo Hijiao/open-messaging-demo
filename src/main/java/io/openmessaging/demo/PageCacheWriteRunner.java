@@ -18,20 +18,20 @@ public class PageCacheWriteRunner extends Thread {
 
     }
 
-    public void run() {
-        try {
-            DefaultBytesMessage message = queue.getMessageFromWriteQueue();
-            while (message != null) {
-                cacheManager.writeMessage(message);
-                message = queue.getMessageFromWriteQueue();
-            }
-            freeCacheManager();
-            //System.out.println(queueBucketName+": WriteQueue empty ,exit");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+//    public void run() {
+////        try {
+////            DefaultBytesMessage message = queue.getMessageFromWriteQueue();
+////            while (message != null) {
+////                cacheManager.writeMessage(message);
+////                message = queue.getMessageFromWriteQueue();
+////            }
+////            freeCacheManager();
+//            //System.out.println(queueBucketName+": WriteQueue empty ,exit");
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
 //        cacheManager.closeCurrPage();
-    }
+//    }
 
     private void freeCacheManager() {
         this.cacheManager = null;

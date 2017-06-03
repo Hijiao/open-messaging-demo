@@ -7,13 +7,11 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class PageCacheReadUnitQueue {
 
-    private boolean isTopic;
     private boolean isFinish = false;
     private String bucketName;
     // private DefaultBytesMessage message;
 
-    public PageCacheReadUnitQueue(String bucketName, boolean isTopic) {
-        this.isTopic = isTopic;
+    public PageCacheReadUnitQueue(String bucketName) {
         this.bucketName = bucketName;
     }
 
@@ -28,6 +26,18 @@ public class PageCacheReadUnitQueue {
     public void productReadBody(DefaultBytesMessage message) throws InterruptedException {
         queue.put(message);
         // queue.offer(messageBody);
+    }
+
+    public void put(DefaultBytesMessage message) throws InterruptedException {
+        queue.put(message);
+    }
+
+    public DefaultBytesMessage poll() {
+        return queue.poll();
+    }
+
+    public boolean isEmpty() {
+        return queue.isEmpty();
     }
 
     public DefaultBytesMessage consumeReadBody() throws InterruptedException {
@@ -46,7 +56,7 @@ public class PageCacheReadUnitQueue {
                 return null;
             }
         }
-        return queue.poll();
+        return queue.take();
 //        if (isTopic) {
 //            message.putHeaders(MessageHeader.TOPIC, bucketName);
 //        } else {
@@ -59,7 +69,4 @@ public class PageCacheReadUnitQueue {
         isFinish = finish;
     }
 
-    public boolean isTopic() {
-        return this.isTopic;
-    }
 }

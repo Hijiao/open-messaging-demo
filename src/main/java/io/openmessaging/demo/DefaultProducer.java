@@ -10,7 +10,6 @@ public class DefaultProducer implements Producer {
 
     private static volatile boolean fistInit = false;
 
-    private static PageCacheManager pageCacheManager = PageCacheManager.getInstance();
     private KeyValue properties;
 
     public DefaultProducer() {
@@ -20,8 +19,8 @@ public class DefaultProducer implements Producer {
         this.properties = properties;
         synchronized (DefaultProducer.class) {
             if (!fistInit) {
-                pageCacheManager.setStorePath(properties.getString("STORE_PATH"));
-                pageCacheManager.start();
+                PageCacheManager.getInstance().setStorePath(properties.getString("STORE_PATH"));
+                PageCacheManager.getInstance().start();
                 fistInit = true;
             }
         }
@@ -140,6 +139,7 @@ public class DefaultProducer implements Producer {
 //            (PageCacheWriteUnitQueueManager)r.
 //        }
         messageStore.flushWriteBuffers();
+        PageCacheManager.getInstance().flushOffsetToFile();
 //        //手动刷掉缓存
 //        String[] commands = {"/bin/sh", "-c", "sync && echo 3 > /proc/sys/vm/drop_caches"};
 //        try {

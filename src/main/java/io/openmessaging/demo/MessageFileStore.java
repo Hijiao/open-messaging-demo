@@ -3,6 +3,7 @@ package io.openmessaging.demo;
 
 import io.openmessaging.Message;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,7 +22,6 @@ public class MessageFileStore {
 
     private Map<String, Queue<DefaultBytesMessage>> beforeWriteBodyMap = new ConcurrentHashMap<>();
 
-    private PageCacheWriteUnitQueueManager writeQueueManager = PageCacheWriteUnitQueueManager.getInstance();
     private PageCacheReadUnitQueueManager readUnitQueueManager = PageCacheReadUnitQueueManager.getInstance();
 
 
@@ -59,21 +59,34 @@ public class MessageFileStore {
     }
 
 
-    public Message pullMessage(String bucket) {
-        PageCacheReadUnitQueue readUnitQueue = readUnitQueueManager.getBucketReadUnitQueue(bucket);
-        DefaultBytesMessage message = null;
-        try {
-            message = readUnitQueue.consumeReadBody();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+    public Message pullMessage(String bucketNameAndOffset) {
+
+        return MessageMap.getInstance().getMessage(bucketNameAndOffset);
+
+    }
+
+    public Message pullMessage(List<String> buckets) {
+
+
+        boolean stopFlag = false;
+        while (!stopFlag) {
+            for (String bucket : buckets) {
+                PageCacheReadUnitQueue readUnitQueue = PageCacheReadUnitQueueManager.getBucketReadUnitQueue(bucket);
+                DefaultBytesMessage message = readUnitQueue.poll();
+                if (message != null) {
+                    return message;
+                }
+            }
         }
-        return message;
+        //queue 和topic 都为空
+        return null;
     }
 
 
     public synchronized void flushWriteBuffers() {
 
         PageCacheWriteUnitQueue queue = PageCacheWriteUnitQueueManager.getWriteQueue();
+
 
         try {
             while (!queue.isEmpty()) {
@@ -83,7 +96,6 @@ public class MessageFileStore {
             e.printStackTrace();
         }
         System.gc();
-
 
     }
 }

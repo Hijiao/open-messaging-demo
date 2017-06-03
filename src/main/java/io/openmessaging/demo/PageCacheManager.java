@@ -1,11 +1,9 @@
 package io.openmessaging.demo;
 
+import io.openmessaging.KeyValue;
 import io.openmessaging.MessageHeader;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -48,8 +46,7 @@ public class PageCacheManager extends Thread {
     private ByteBuffer byteBuffer = ByteBuffer.allocate(1024 * 300);//消息大小最大256kb
     private int currPageNumber = -1;
     RandomAccessFile randAccessFile;
-
-    private boolean finishSending = false;
+    DefaultKeyValue bucketsOffsetMap = new DefaultKeyValue();
 
 
     @Override
@@ -57,12 +54,31 @@ public class PageCacheManager extends Thread {
         while (true) {
             DefaultBytesMessage message = writeQueue.poll();
             if (message != null) {
-                writeMessage(message);
+                String bucketName = message.headers().getString(MessageHeader.TOPIC);
+                if (bucketName == null) {
+                    bucketName = message.headers().getString(MessageHeader.QUEUE);
+                }
+                int offset = bucketsOffsetMap.getInt(bucketName);
+
+                bucketsOffsetMap.put(bucketName, ++offset);
+                writeMessage(offset, message);
             }
         }
-
     }
 
+
+    public void flushOffsetToFile() {
+        StringBuilder builder = new StringBuilder();
+        builder.append(storePath).append(File.separator).append("offset.txt");
+        try {
+            FileWriter fw = new FileWriter(builder.toString());
+            fw.write(bucketsOffsetMap.toString());
+            System.out.println(bucketsOffsetMap.toString());
+            fw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public PageCacheManager(String bucket, String storePath, boolean isTopic) {
         this.storePath = storePath;
@@ -108,9 +124,10 @@ public class PageCacheManager extends Thread {
     }
 
 
-    public void writeMessage(DefaultBytesMessage message) {
+    public void writeMessage(Integer offset, DefaultBytesMessage message) {
         String key;
         byteBuffer.clear();
+        byteBuffer.putInt(offset);
         if (currPage == null) {
             currPage = createNewPageToWrite(++currPageNumber);
         }
@@ -118,12 +135,10 @@ public class PageCacheManager extends Thread {
 
         for (Map.Entry<String, Object> kv : entrySet) {
             key = kv.getKey();
-            if ((!MessageHeader.TOPIC.equals(key)) && (!MessageHeader.QUEUE.equals(key))) {//MessageId
-                byteBuffer.put(key.getBytes());
-                byteBuffer.put(MARKET_PREFIX_HEADER_KEY);
-                byteBuffer.put(((String) kv.getValue()).getBytes());
-                byteBuffer.put(MARKET_PREFIX_HEADER_VALUE);
-            }
+            byteBuffer.put(key.getBytes());
+            byteBuffer.put(MARKET_PREFIX_HEADER_KEY);
+            byteBuffer.put(((String) kv.getValue()).getBytes());
+            byteBuffer.put(MARKET_PREFIX_HEADER_VALUE);
 
         }
 
@@ -217,6 +232,13 @@ public class PageCacheManager extends Thread {
         }
     }
 
+    public static void main(String[] args) {
+        KeyValue map = new DefaultKeyValue();
+        map.put("a", 1);
+        map.put("a", 2);
+
+        System.out.println(map);
+    }
 }
 
 

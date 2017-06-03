@@ -16,21 +16,17 @@ public class PageCacheReadUnitQueueManager {
 
     private static final Map<String, PageCacheReadUnitQueue> bucketsReadQueueMap = new HashMap<>();
 
-    private static String filePath;
+    private static final Map<String, Integer> curentOffset = new HashMap<>(120);
 
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
-    }
 
-    public synchronized static void intPageCacheReadUnitQueu(String bucket, boolean isTopic) {
+    public synchronized static void intPageCacheReadUnitQueue(String bucket) {
         PageCacheReadUnitQueue queue = bucketsReadQueueMap.get(bucket);
         if (queue == null) {
-            queue = new PageCacheReadUnitQueue(bucket, isTopic);
+            queue = new PageCacheReadUnitQueue(bucket);
             bucketsReadQueueMap.put(bucket, queue);
-            PageCacheReadRunner runner = new PageCacheReadRunner(queue, bucket, filePath);
-            runner.start();
+            //PageCacheReadRunner runner = new PageCacheReadRunner(queue, bucket, filePath);
+//            runner.start();
         }
-
     }
 
 

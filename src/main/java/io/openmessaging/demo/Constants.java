@@ -23,6 +23,10 @@ public class Constants {
     public static final int WRITE_QUEUE_SIZE = 1000;
 
 
+    //consumer消费时，连续读QUEUE、Topic都为空则判断结束；
+    public static final int POLL_TRY_COUNT = 3;
+
+
     public static final int PAGE_CACHE_WRITE_CORE_POOL_SIZE = 120;//核心线程数
 
     public static final int PAGE_CACHE_WRITE_MAX_POOL_SIZE = 120;//最大线程数

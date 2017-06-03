@@ -4,21 +4,67 @@ import io.openmessaging.KeyValue;
 import io.openmessaging.Message;
 import io.openmessaging.PullConsumer;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.io.File;
+import java.io.FileInputStream;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class DefaultPullConsumer implements PullConsumer {
     private MessageFileStore messageStore = MessageFileStore.getInstance();
     private KeyValue properties;
     private String queue;
-    private Set<String> topics = new HashSet<>();
+    private List<String> buckets = new ArrayList<>();
+
+    private static volatile boolean fistInit = false;
+
 
     public DefaultPullConsumer(KeyValue properties) {
         this.properties = properties;
-        PageCacheReadUnitQueueManager.getInstance().setFilePath(properties.getString("STORE_PATH"));
+        synchronized (DefaultPullConsumer.class) {
+            if (!fistInit) {
+                init(properties.getString("STORE_PATH"));
+                fistInit = true;
+            }
+        }
     }
 
+    private static final Map<String, AtomicInteger> counter = new HashMap<String, AtomicInteger>();
+
+    private static final Map<String, Integer> maxOffset = new HashMap<>();
+
+
+    private static void init(String storePath) {
+        PageCacheReaderManager.getInstance().setStorePath(storePath);
+        PageCacheReaderManager.getInstance().start();
+
+
+        try {
+
+            File file = new File(storePath);
+            FileInputStream in = new FileInputStream(file);
+            int size = in.available();
+
+            byte[] buffer = new byte[size];
+
+            in.read(buffer);
+
+            in.close();
+            String s = new String(buffer);
+            String[] records = s.split(",");
+
+            for (String record : records) {
+                System.out.println(record.split("=")[0]);
+                System.out.println(record.split("=")[1]);
+                PageCacheReadUnitQueueManager.intPageCacheReadUnitQueue(record.split("=")[0]);
+                maxOffset.put(record.split("=")[0], Integer.parseInt(record.split("=")[1]));
+                counter.put(record.split("=")[0], new AtomicInteger());
+            }
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     @Override
     public KeyValue properties() {
@@ -44,24 +90,18 @@ public class DefaultPullConsumer implements PullConsumer {
     @Override
     public Message poll() {
 
-
-//        if (topics.size() == 0 || queue == null) {
-//            return null;
-//        }
-        Message message = messageStore.pullMessage(queue);
-        if (message != null) {
-            //  showQMessage(message);
-            return message;
-        }
-        for (String topic : topics) {
-            message = messageStore.pullMessage(topic);
-            if (message != null) {
-                //   showTMessage(message);
-                return message;
+        for (String bucket : buckets) {
+            int offset = counter.get(bucket).decrementAndGet();
+            if (offset > maxOffset.get(bucket)) {
+                return null;
             }
+
+            Message message = messageStore.pullMessage()
+
         }
 
-        return null;
+        return messageStore.pullMessage(buckets);
+
     }
 
     @Override
@@ -84,15 +124,12 @@ public class DefaultPullConsumer implements PullConsumer {
         if (queue != null && !queue.equals(queueName)) {
             throw new ClientOMSException("You have alreadly attached to a queue " + queue);
         }
-
         queue = queueName;
-        //topics.add(queueName);
-        this.topics.addAll(topics);
+        buckets.add(queueName);
+        buckets.addAll(topics);
 
-        PageCacheReadUnitQueueManager.intPageCacheReadUnitQueu(queueName, false);
-
-        for (String topic : topics) {
-            PageCacheReadUnitQueueManager.intPageCacheReadUnitQueu(topic, true);
+        for (String bucket : buckets) {
+            PageCacheReadUnitQueueManager.intPageCacheReadUnitQueue(bucket);
         }
 
 

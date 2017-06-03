@@ -1,12 +1,14 @@
 package io.openmessaging.demo;
 
+import io.openmessaging.MessageHeader;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.Map;
 
 import static io.openmessaging.demo.Constants.*;
 import static io.openmessaging.demo.PageCacheManager.unmap;
@@ -17,48 +19,39 @@ import static io.openmessaging.demo.PageCacheManager.unmap;
 public class PageCacheReaderManager extends Thread {
 
 
+    private PageCacheReaderManager() {
+
+    }
+
+    private static PageCacheReaderManager INSTANCE = new PageCacheReaderManager();
+
+    public static PageCacheReaderManager getInstance() {
+        return INSTANCE;
+    }
+
+
     MappedByteBuffer currPage = null;
-    int currPageRemaining;
     boolean hasPackagedOneMessage = false;
     boolean finishFlag = false;
-    private String storePath;
-    private String bucket;
-    private boolean isTopic;
-    private int currPageNumber = -1;
+    String storePath;
+    int currPageNumber = -1;
 
-    private boolean isReadFinished = false;
+    boolean isReadFinished = false;
+    ByteBuffer tmpByteBuffer = ByteBuffer.allocate(Constants.BYTE_BUFFER_SIZE);
 
-    private LinkedBlockingQueue<ByteBuffer> emptyByteBuffers = new LinkedBlockingQueue<>(BYTE_BUFFER_NUMBER_IN_QUEUE);
-    private LinkedBlockingQueue<ByteBuffer> fullByteBuffers = new LinkedBlockingQueue<>(BYTE_BUFFER_NUMBER_IN_QUEUE);
 
-    public LinkedBlockingQueue<ByteBuffer> getEmptyByteBuffers() {
-        return emptyByteBuffers;
+    public void setStorePath(String path) {
+        storePath = path;
+        initRandomFile();
     }
 
-    public LinkedBlockingQueue<ByteBuffer> getFullByteBuffers() {
-        return fullByteBuffers;
-    }
 
     RandomAccessFile randAccessFile;
 
-    public PageCacheReaderManager(String bucket, String storePath, boolean isTopic) {
-        this.bucket = bucket;
-        this.storePath = storePath;
-        this.isTopic = isTopic;
-        for (int i = 0; i < BYTE_BUFFER_NUMBER_IN_QUEUE; i++) {
-            try {
-                emptyByteBuffers.put(ByteBuffer.allocateDirect(BYTE_BUFFER_SIZE));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        randAccessFile = initRandomFile();
-
-    }
 
     private RandomAccessFile initRandomFile() {
         StringBuilder builder = new StringBuilder();
-        builder.append(storePath).append(File.separator).append(bucket);
+        builder.append(storePath).append(File.separator).append("message.txt");
         try {
             return new RandomAccessFile(new File(builder.toString()), "r");
         } catch (FileNotFoundException e) {
@@ -68,70 +61,117 @@ public class PageCacheReaderManager extends Thread {
     }
 
     public void run() {
-        try {
-            while (true) {
-                ByteBuffer byteBuffer = emptyByteBuffers.take();
-                ByteBuffer fullByteBuffer = readMessageFromFileToByteBuffer(byteBuffer);
-                if (fullByteBuffer == null) {
-                    isReadFinished = true;
-                    break;
-                }
-                fullByteBuffers.put(fullByteBuffer);
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        Map<String, DefaultBytesMessage> map = MessageMap.getInstance().getMap();
+        while (!isReadFinished) {
+            getMessageFromFileAndSentToMap(map);
         }
 
     }
 
 
-    public ByteBuffer readMessageFromFileToByteBuffer(ByteBuffer byteBuffer) {
+    private void getMessageFromFileAndSentToMap(Map<String, DefaultBytesMessage> map) {
+        String key = null;
+        DefaultBytesMessage message = new DefaultBytesMessage();
 
-        //TODO 拼接message头的工作在这里完成
         hasPackagedOneMessage = false;
         if (currPage == null && currPageNumber == -1) {
-            currPage = createNewPageToRead(++currPageNumber);
+            createNewPageToRead(++currPageNumber);
         }
         if (currPage == null) {
-            return null;
+            isReadFinished = true;
+            return;
         }
-        currPageRemaining = currPage.remaining();
+        int offset = getNextIntFromCurrPage();
+
         while ((!hasPackagedOneMessage) && (!finishFlag)) {
             byte currByte = getNextByteFromCurrPage();
-            byteBuffer.put(currByte);
             if (currByte != MARKER_PREFIX) {
                 if (currByte == 0x00) {
-                    return null;
+                    return;
                 }
+                tmpByteBuffer.put(currByte);
             } else {
                 byte byteType = getNextByteFromCurrPage();
-                byteBuffer.put(byteType);
                 switch (byteType) {
-                    case MESSAGE_END_MARKER:
-                        hasPackagedOneMessage = true;
+                    case HEADER_KEY_END_MARKER:
+                        //tmpByteBuffer.flip();
+                        key = new String(tmpByteBuffer.array(), 0, tmpByteBuffer.position());
                         break;
-                    case MARKER_PREFIX:
-                        finishFlag = true;
+                    case HEADER_VALUE_END_MARKER:
+                        message.putHeaders(key, new String(tmpByteBuffer.array(), 0, tmpByteBuffer.position()));
+                        key = null;
+                        break;
+                    case PRO_KEY_END_MARKER:
+                        key = new String(tmpByteBuffer.array(), 0, tmpByteBuffer.position());
+                        break;
+                    case PRO_VALUE_END_MARKER:
+                        message.putProperties(key, new String(tmpByteBuffer.array(), 0, tmpByteBuffer.position()));
+                        key = null;
+                        break;
+                    case MESSAGE_END_MARKER:
+                        int bodyLen = tmpByteBuffer.position();
+                        byte[] body = new byte[bodyLen];
+                        System.arraycopy(tmpByteBuffer.array(), 0, body, 0, bodyLen);
+                        tmpByteBuffer.rewind();
+                        tmpByteBuffer.get(body);
+                        message.setBody(body);
+                        hasPackagedOneMessage = true;
+                        body = null;
                         break;
                 }
             }
         }
         if (hasPackagedOneMessage) {
 //            System.out.println(byteBuffer.toString());
-            return byteBuffer;
+            String bucketName;
+            bucketName = message.headers().getString(MessageHeader.TOPIC);
+            if (bucketName == null) {
+                bucketName = message.headers().getString(MessageHeader.QUEUE);
+            }
+            map.put(bucketName + "#" + offset, message);
         }
-        return null;
+
     }
 
 
-    private MappedByteBuffer createNewPageToRead(int index) {
-        try {
-            MappedByteBuffer byteBuffer = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * (index + 1));
-            return byteBuffer;
-        } catch (Exception e) {
-            //e.printStackTrace();
-            return null;
+    private void createNewPageToRead(int index) {
+        if (index != 0) {
+            unmap(currPage);
+            // closeCurrPage();
+            currPage = null;
+            System.gc();
         }
+
+        try {
+            currPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * (index + 1));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private Integer getNextIntFromCurrPage() {
+
+        int remain = currPage.remaining();
+        if (remain > 4) {
+            return currPage.getInt();
+        }
+        byte[] b = new byte[4];
+        for (int i = 0; i < remain; i++) {
+            b[i] = currPage.get();
+        }
+        createNewPageToRead(++currPageNumber);
+
+        for (int i = remain; i < 4; i++) {
+            b[i] = currPage.get();
+        }
+
+
+        return b[3] & 0xFF |
+                (b[2] & 0xFF) << 8 |
+                (b[1] & 0xFF) << 16 |
+                (b[0] & 0xFF) << 24;
 
     }
 
@@ -141,12 +181,7 @@ public class PageCacheReaderManager extends Thread {
             if (currPage.hasRemaining()) {
                 return currPage.get();
             } else {
-                currPage.force();
-                unmap(currPage);
-                // closeCurrPage();
-                currPage = null;
-                System.gc();
-                currPage = createNewPageToRead(++currPageNumber);
+                createNewPageToRead(++currPageNumber);
 
             }
         }
