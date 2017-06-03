@@ -26,20 +26,20 @@ public class DefaultPullConsumer implements PullConsumer {
     }
 
 
-    int count = 0;
-    int tc = 0;
-
-    private void showQMessage(Message message) {
-        if (count++ % 10000000 == 0) {
-            System.out.println(((DefaultBytesMessage) message).toString());
-        }
-    }
-
-    private void showTMessage(Message message) {
-        if (tc++ % 10000000 == 0) {
-            System.out.println(((DefaultBytesMessage) message).toString());
-        }
-    }
+//    int count = 0;
+//    int tc = 0;
+//
+//    private void showQMessage(Message message) {
+//        if (count++ % 10000000 == 0) {
+//            System.out.println(((DefaultBytesMessage) message).toString());
+//        }
+//    }
+//
+//    private void showTMessage(Message message) {
+//        if (tc++ % 10000000 == 0) {
+//            System.out.println(((DefaultBytesMessage) message).toString());
+//        }
+//    }
 
     @Override
     public Message poll() {
@@ -50,13 +50,13 @@ public class DefaultPullConsumer implements PullConsumer {
 //        }
         Message message = messageStore.pullMessage(queue);
         if (message != null) {
-            showQMessage(message);
+            //  showQMessage(message);
             return message;
         }
         for (String topic : topics) {
             message = messageStore.pullMessage(topic);
             if (message != null) {
-                showTMessage(message);
+                //   showTMessage(message);
                 return message;
             }
         }

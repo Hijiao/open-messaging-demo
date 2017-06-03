@@ -1,16 +1,6 @@
 package io.openmessaging.demo;
 
-import io.openmessaging.BatchToPartition;
-import io.openmessaging.BytesMessage;
-import io.openmessaging.KeyValue;
-import io.openmessaging.Message;
-import io.openmessaging.MessageFactory;
-import io.openmessaging.MessageHeader;
-import io.openmessaging.Producer;
-import io.openmessaging.Promise;
-
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
+import io.openmessaging.*;
 
 public class DefaultProducer implements Producer {
 
@@ -144,5 +134,14 @@ public class DefaultProducer implements Producer {
 //            (PageCacheWriteUnitQueueManager)r.
 //        }
         messageStore.flushWriteBuffers();
+        //手动刷掉缓存
+        String[] commands = {"/bin/sh", "-c", "sync && echo 3 > /proc/sys/vm/drop_caches"};
+        try {
+            Process pr = Runtime.getRuntime().exec(commands);
+            pr.waitFor();
+            System.out.println("flushed  cache!");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
