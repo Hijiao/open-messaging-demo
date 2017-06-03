@@ -134,14 +134,14 @@ public class DefaultProducer implements Producer {
 //            (PageCacheWriteUnitQueueManager)r.
 //        }
         messageStore.flushWriteBuffers();
-        //手动刷掉缓存
-        String[] commands = {"/bin/sh", "-c", "sync && echo 3 > /proc/sys/vm/drop_caches"};
-        try {
-            Process pr = Runtime.getRuntime().exec(commands);
-            pr.waitFor();
-            System.out.println("flushed  cache!");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        //手动刷掉缓存
+//        String[] commands = {"/bin/sh", "-c", "sync && echo 3 > /proc/sys/vm/drop_caches"};
+//        try {
+//            Process pr = Runtime.getRuntime().exec(commands);
+//            pr.waitFor();
+//            System.out.println("flushed  cache!");
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
     }
 }
