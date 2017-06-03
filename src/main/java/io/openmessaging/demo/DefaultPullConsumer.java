@@ -26,18 +26,37 @@ public class DefaultPullConsumer implements PullConsumer {
     }
 
 
+    int count = 0;
+    int tc = 0;
+
+    private void showQMessage(Message message) {
+        if (count++ % 10000000 == 0) {
+            System.out.println(((DefaultBytesMessage) message).toString());
+        }
+    }
+
+    private void showTMessage(Message message) {
+        if (tc++ % 10000000 == 0) {
+            System.out.println(((DefaultBytesMessage) message).toString());
+        }
+    }
+
     @Override
     public Message poll() {
+
+
 //        if (topics.size() == 0 || queue == null) {
 //            return null;
 //        }
         Message message = messageStore.pullMessage(queue);
         if (message != null) {
+            showQMessage(message);
             return message;
         }
         for (String topic : topics) {
             message = messageStore.pullMessage(topic);
             if (message != null) {
+                showTMessage(message);
                 return message;
             }
         }
