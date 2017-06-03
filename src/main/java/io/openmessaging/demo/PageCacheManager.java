@@ -130,6 +130,7 @@ public class PageCacheManager {
             for (int i = 0; i < currPageRemaining; i++) {
                 currPage.put(byteBuffer.get());
             }
+            currPage.force();
             unmap(currPage);
             currPage = null;
             System.gc();
@@ -185,6 +186,7 @@ public class PageCacheManager {
     }
 
     protected void finalize() {
+        currPage.force();
         unmap(this.currPage);
         currPage = null;
         try {

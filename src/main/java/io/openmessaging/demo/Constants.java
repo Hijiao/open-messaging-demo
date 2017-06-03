@@ -18,7 +18,7 @@ public class Constants {
 
     public static final int BIG_WRITE_PAGE_SIZE = 1024 * 1024 * 800;
 
-    public static final int MAPPED_BYTE_BUFF_PAGE_SIZE = 1024 * 1024 * 8;
+    public static final int MAPPED_BYTE_BUFF_PAGE_SIZE = 1024 * 1024 * 16;
 
     public static final int SEND_TO_WRITE_QUEUE_BATCH_SIZE = 0;
 

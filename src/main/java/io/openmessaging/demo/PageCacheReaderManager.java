@@ -2,7 +2,6 @@ package io.openmessaging.demo;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -53,17 +52,18 @@ public class PageCacheReaderManager extends Thread {
                 e.printStackTrace();
             }
         }
-        initRandomFile();
+        randAccessFile = initRandomFile();
 
     }
 
-    private void initRandomFile() {
+    private RandomAccessFile initRandomFile() {
         StringBuilder builder = new StringBuilder();
         builder.append(storePath).append(File.separator).append(bucket);
         try {
-            randAccessFile = new RandomAccessFile(new File(builder.toString()), "r");
+            return new RandomAccessFile(new File(builder.toString()), "r");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
+            return null;
         }
     }
 
@@ -126,11 +126,13 @@ public class PageCacheReaderManager extends Thread {
 
     private MappedByteBuffer createNewPageToRead(int index) {
         try {
-            return randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * (index + 1));
-        } catch (IOException e) {
-            e.printStackTrace();
+            MappedByteBuffer byteBuffer = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * (index + 1));
+            return byteBuffer;
+        } catch (Exception e) {
+            //e.printStackTrace();
+            return null;
         }
-        return null;
+
     }
 
     private byte getNextByteFromCurrPage() {
@@ -139,6 +141,7 @@ public class PageCacheReaderManager extends Thread {
             if (currPage.hasRemaining()) {
                 return currPage.get();
             } else {
+                currPage.force();
                 unmap(currPage);
                 // closeCurrPage();
                 currPage = null;
