@@ -1,6 +1,8 @@
 package io.openmessaging.demo;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -38,6 +40,8 @@ public class PageCacheReaderManager extends Thread {
         return fullByteBuffers;
     }
 
+    RandomAccessFile randAccessFile;
+
     public PageCacheReaderManager(String bucket, String storePath, boolean isTopic) {
         this.bucket = bucket;
         this.storePath = storePath;
@@ -48,6 +52,18 @@ public class PageCacheReaderManager extends Thread {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        }
+        initRandomFile();
+
+    }
+
+    private void initRandomFile() {
+        StringBuilder builder = new StringBuilder();
+        builder.append(storePath).append(File.separator).append(bucket);
+        try {
+            randAccessFile = new RandomAccessFile(new File(builder.toString()), "r");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
         }
     }
 
@@ -109,17 +125,12 @@ public class PageCacheReaderManager extends Thread {
 
 
     private MappedByteBuffer createNewPageToRead(int index) {
-        StringBuilder builder = new StringBuilder();
-        int pageSize = (isTopic ? BIG_WRITE_PAGE_SIZE : SMALL_WRITE_PAGE_SIZE);
-        builder.append(storePath).append(File.separator).append(bucket).append("_").append(isTopic).append("_").append(String.format("%03d", index));
         try {
-            RandomAccessFile randAccessFile = new RandomAccessFile(new File(builder.toString()), "r");
-            MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, pageSize);
-            return newPage;
-        } catch (Exception e) {
-            //e.printStackTrace();
-            return null;
+            return randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * (index + 1));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+        return null;
     }
 
     private byte getNextByteFromCurrPage() {

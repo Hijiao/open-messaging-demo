@@ -3,6 +3,8 @@ package io.openmessaging.demo;
 import io.openmessaging.MessageHeader;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -24,20 +26,29 @@ public class PageCacheManager {
 
     MappedByteBuffer currPage = null;
     int currPageRemaining;
-    boolean hasPackagedOneMessage = false;
-    boolean finishFlag = false;
     private String storePath;
     private String bucket;
     private boolean isTopic;
     private ByteBuffer byteBuffer = ByteBuffer.allocate(1024 * 300);//消息大小最大256kb
-    private byte[] byteArray = new byte[1024 * 256];
     private int currPageNumber = -1;
+    RandomAccessFile randAccessFile;
 
 
     public PageCacheManager(String bucket, String storePath, boolean isTopic) {
         this.bucket = bucket;
         this.storePath = storePath;
         this.isTopic = isTopic;
+        initRandomFile();
+    }
+
+    private void initRandomFile() {
+        StringBuilder builder = new StringBuilder();
+        builder.append(storePath).append(File.separator).append(bucket);
+        try {
+            randAccessFile = new RandomAccessFile(new File(builder.toString()), "rw");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void unmap(final MappedByteBuffer mappedByteBuffer) {
@@ -124,7 +135,6 @@ public class PageCacheManager {
             System.gc();
 //            closeCurrPage();
             currPage = createNewPageToWrite(++currPageNumber);
-            System.gc();
             for (int i = currPageRemaining; i < messageLen; i++) {
                 currPage.put(byteBuffer.get());
             }
@@ -139,18 +149,12 @@ public class PageCacheManager {
 
 
     private MappedByteBuffer createNewPageToWrite(int index) {
-        int pageSize = (isTopic ? BIG_WRITE_PAGE_SIZE : SMALL_WRITE_PAGE_SIZE);
-
-        StringBuilder builder = new StringBuilder();
-        builder.append(storePath).append(File.separator).append(bucket).append("_").append(isTopic).append("_").append(String.format("%03d", index));
         try {
-            RandomAccessFile randAccessFile = new RandomAccessFile(new File(builder.toString()), "rw");
-            MappedByteBuffer newPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_WRITE, 0, pageSize);
-            return newPage;
-        } catch (Exception e) {
+            return randAccessFile.getChannel().map(FileChannel.MapMode.READ_WRITE, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * (index + 1));
+        } catch (IOException e) {
             e.printStackTrace();
-            return null;
         }
+        return null;
     }
 
 
@@ -184,6 +188,7 @@ public class PageCacheManager {
         unmap(this.currPage);
         currPage = null;
         try {
+            randAccessFile.close();
             super.finalize();
         } catch (Throwable throwable) {
             throwable.printStackTrace();
