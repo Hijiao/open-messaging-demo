@@ -22,11 +22,16 @@ public class PageCacheWriteUnitQueue {
         // queue.offer(message);
     }
 
+    /**
+     * take()方法和put()方法是对应的，从中拿一个数据，如果拿不到线程挂起
+     * poll()方法和offer()方法是对应的，从中拿一个数据，如果没有直接返回null
+     */
+
     public DefaultBytesMessage getMessageFromWriteQueue() throws InterruptedException {
         //return queue.take();
         while (queue.isEmpty()) {
             if (!isFinish) {
-                //  Thread.sleep(10);
+                Thread.sleep(10);
             } else {
                 return null;
             }
