@@ -6,7 +6,6 @@ import io.openmessaging.Message;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Created by Max on 2017/5/19.
@@ -26,25 +25,23 @@ public class MessageFileStore {
     private PageCacheReadUnitQueueManager readUnitQueueManager = PageCacheReadUnitQueueManager.getInstance();
 
 
-    public synchronized void putMessage(boolean isTopic, String bucket, Message message) {
-
-        if (!beforeWriteBodyMap.containsKey(bucket)) {
-            beforeWriteBodyMap.put(bucket, new ConcurrentLinkedQueue<>());
-            writeQueueManager.intBucketWriteQueue(bucket, isTopic);
-        }
-//        Queue<DefaultBytesMessage> beforeWriteBodyQueue = beforeWriteBodyMap.get(bucket);
-//        beforeWriteBodyQueue.add((DefaultBytesMessage) message);
-        PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket);
-
-        try {
-            queue.putMessageInWriteQueue((DefaultBytesMessage) message);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-//        if (beforeWriteBodyQueue.size() > Constants.SEND_TO_WRITE_QUEUE_BATCH_SIZE) {
-//            PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket);
-//            sendBatchMessageToQueue(beforeWriteBodyQueue, queue);
+    public void putMessage(Message message) {
+//
+//        if (!beforeWriteBodyMap.containsKey(bucket)) {
+//            synchronized (beforeWriteBodyMap) {
+//                if (!beforeWriteBodyMap.containsKey(bucket)) {
+//                    beforeWriteBodyMap.put(bucket, new ConcurrentLinkedQueue<>());
+//                    writeQueueManager.intBucketWriteQueue(bucket, isTopic);
+//                }
+//            }
+//
 //        }
+////        Queue<DefaultBytesMessage> beforeWriteBodyQueue = beforeWriteBodyMap.get(bucket);
+////        beforeWriteBodyQueue.add((DefaultBytesMessage) message);
+//        PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket);
+
+        PageCacheWriteUnitQueue queue = PageCacheWriteUnitQueueManager.getWriteQueue();
+        queue.offer((DefaultBytesMessage) message);
 
     }
 
@@ -73,42 +70,20 @@ public class MessageFileStore {
         return message;
     }
 
-    boolean hasFlushed = false;
 
     public synchronized void flushWriteBuffers() {
-        if (hasFlushed) {
-            return;
-        } else {
-            hasFlushed = true;
-        }
-        Map<String, PageCacheWriteRunner> writeRunnerMap = writeQueueManager.getBucketsWriteThreadMap();
 
-        for (Map.Entry<String, Queue<DefaultBytesMessage>> entry : beforeWriteBodyMap.entrySet()) {
-            //System.out.println("bucket:====== " + entry.getKey());
-            Queue<DefaultBytesMessage> beforeWriteBodyQueue = entry.getValue();
-            PageCacheWriteRunner runner = writeRunnerMap.get(entry.getKey());
-            if (beforeWriteBodyQueue.isEmpty()) {
-                runner.getQueue().setFinish(true);
-            } else {
+        PageCacheWriteUnitQueue queue = PageCacheWriteUnitQueueManager.getWriteQueue();
 
-                //TODO 当总数小于批次数时，queue一直未被初始化，flush会报错
-                PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(entry.getKey());
-                // PageCacheWriteUnitQueue queue = runner.getQueue();
-                sendBatchMessageToQueue(beforeWriteBodyQueue, queue);
-                queue.setFinish(true);
-            }
-
-        }
         try {
-
-            for (PageCacheWriteRunner writeRunner : writeRunnerMap.values()) {
-                writeRunner.join();
+            while (!queue.isEmpty()) {
+                Thread.sleep(10);
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         System.gc();
-        System.out.println("all write threads  exit");
+
 
     }
 }

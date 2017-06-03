@@ -58,7 +58,7 @@ public class PageCacheReadRunner extends Thread {
 //                queue.productReadBody(message);
 //                message = pageCacheReaderManager.readMessageFromFileToByteBuffer();
 //            }
-            // queue.setFinish(true);
+            // queue.setFinishedSending(true);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

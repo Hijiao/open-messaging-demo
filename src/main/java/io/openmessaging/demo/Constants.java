@@ -20,7 +20,7 @@ public class Constants {
 
     public static final int MAPPED_BYTE_BUFF_PAGE_SIZE = 1024 * 1024 * 16;
 
-    public static final int SEND_TO_WRITE_QUEUE_BATCH_SIZE = 0;
+    public static final int WRITE_QUEUE_SIZE = 1000;
 
 
     public static final int PAGE_CACHE_WRITE_CORE_POOL_SIZE = 120;//核心线程数

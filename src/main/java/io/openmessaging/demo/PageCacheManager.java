@@ -20,30 +20,58 @@ import static io.openmessaging.demo.Constants.*;
 /**
  * Created by Max on 2017/5/23.
  */
-public class PageCacheManager {
+public class PageCacheManager extends Thread {
 
     //TODO 批量移动buffer http://www.cnblogs.com/lxzh/archive/2013/05/10/3071680.html
+
+    private PageCacheManager() {
+
+    }
+
+    public static final PageCacheManager INSTANCE = new PageCacheManager();
+
+    public static PageCacheManager getInstance() {
+        return INSTANCE;
+    }
+
+    public void setStorePath(String path) {
+        storePath = path;
+        initRandomFile();
+    }
+
+
+    PageCacheWriteUnitQueue writeQueue = PageCacheWriteUnitQueueManager.getWriteQueue();
 
     MappedByteBuffer currPage = null;
     int currPageRemaining;
     private String storePath;
-    private String bucket;
-    private boolean isTopic;
     private ByteBuffer byteBuffer = ByteBuffer.allocate(1024 * 300);//消息大小最大256kb
     private int currPageNumber = -1;
     RandomAccessFile randAccessFile;
 
+    private boolean finishSending = false;
+
+
+    @Override
+    public void run() {
+        while (true) {
+            DefaultBytesMessage message = writeQueue.poll();
+            if (message != null) {
+                writeMessage(message);
+            }
+        }
+
+    }
+
 
     public PageCacheManager(String bucket, String storePath, boolean isTopic) {
-        this.bucket = bucket;
         this.storePath = storePath;
-        this.isTopic = isTopic;
         initRandomFile();
     }
 
     private void initRandomFile() {
         StringBuilder builder = new StringBuilder();
-        builder.append(storePath).append(File.separator).append(bucket);
+        builder.append(storePath).append(File.separator).append("message.txt");
         try {
             randAccessFile = new RandomAccessFile(new File(builder.toString()), "rw");
         } catch (FileNotFoundException e) {
@@ -79,14 +107,6 @@ public class PageCacheManager {
         }
     }
 
-    public static void main(String[] args) {
-        String ss = "a";
-        Testclass t = new Testclass(ss);
-        ss = "b";
-        System.out.println(t.gets());
-
-
-    }
 
     public void writeMessage(DefaultBytesMessage message) {
         String key;
@@ -95,16 +115,16 @@ public class PageCacheManager {
             currPage = createNewPageToWrite(++currPageNumber);
         }
         Set<Map.Entry<String, Object>> entrySet = ((DefaultKeyValue) message.headers()).getMap().entrySet();
-        if (entrySet.size() != 1) {
-            for (Map.Entry<String, Object> kv : entrySet) {
-                key = kv.getKey();
-                if ((!MessageHeader.TOPIC.equals(key)) && (!MessageHeader.QUEUE.equals(key))) {//MessageId
-                    byteBuffer.put(key.getBytes());
-                    byteBuffer.put(MARKET_PREFIX_HEADER_KEY);
-                    byteBuffer.put(((String) kv.getValue()).getBytes());
-                    byteBuffer.put(MARKET_PREFIX_HEADER_VALUE);
-                }
+
+        for (Map.Entry<String, Object> kv : entrySet) {
+            key = kv.getKey();
+            if ((!MessageHeader.TOPIC.equals(key)) && (!MessageHeader.QUEUE.equals(key))) {//MessageId
+                byteBuffer.put(key.getBytes());
+                byteBuffer.put(MARKET_PREFIX_HEADER_KEY);
+                byteBuffer.put(((String) kv.getValue()).getBytes());
+                byteBuffer.put(MARKET_PREFIX_HEADER_VALUE);
             }
+
         }
 
         DefaultKeyValue properties = (DefaultKeyValue) message.properties();
@@ -148,7 +168,6 @@ public class PageCacheManager {
     }
 
 
-
     private MappedByteBuffer createNewPageToWrite(int index) {
         try {
             return randAccessFile.getChannel().map(FileChannel.MapMode.READ_WRITE, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * (index + 1));
@@ -183,6 +202,7 @@ public class PageCacheManager {
         public String gets() {
             return s;
         }
+
     }
 
     protected void finalize() {

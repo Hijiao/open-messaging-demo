@@ -8,10 +8,9 @@ public class DefaultProducer implements Producer {
     //    private MessageStore messageStore =MessageStore.getInstance();
     private MessageFileStore messageStore = MessageFileStore.getInstance();
 
-    private PageCacheWriteUnitQueueManager queueManager = PageCacheWriteUnitQueueManager.getInstance();
+    private static volatile boolean fistInit = false;
 
-    int header_count = 0;
-    int pro_count = 0;
+    private static PageCacheManager pageCacheManager = PageCacheManager.getInstance();
     private KeyValue properties;
 
     public DefaultProducer() {
@@ -19,7 +18,13 @@ public class DefaultProducer implements Producer {
 
     public DefaultProducer(KeyValue properties) {
         this.properties = properties;
-        queueManager.setFilePath(properties.getString("STORE_PATH"));
+        synchronized (DefaultProducer.class) {
+            if (!fistInit) {
+                pageCacheManager.setStorePath(properties.getString("STORE_PATH"));
+                pageCacheManager.start();
+                fistInit = true;
+            }
+        }
     }
 
 
@@ -76,17 +81,18 @@ public class DefaultProducer implements Producer {
 //        }
 
         //if (message == null) throw new ClientOMSException("Message should not be null");
-        String topic = message.headers().getString(MessageHeader.TOPIC);
-        String queue = message.headers().getString(MessageHeader.QUEUE);
+//        String topic = message.headers().getString(MessageHeader.TOPIC);
+//        String queue = message.headers().getString(MessageHeader.QUEUE);
 //        if ((topic == null && queue == null) || (topic != null && queue != null)) {
 //            throw new ClientOMSException(String.format("Queue:%s Topic:%s should put one and only one", true, queue));
 //        }
-        if (topic != null) {
-            messageStore.putMessage(true, topic, message);
-
-        } else {
-            messageStore.putMessage(false, queue, message);
-        }
+//        if (topic != null) {
+//            messageStore.putMessage(true, topic, message);
+//
+//        } else {
+//            messageStore.putMessage(false, queue, message);
+//        }
+        messageStore.putMessage(message);
 
 
     }

@@ -11,10 +11,14 @@ public class PageCacheWriteUnitQueue {
         this.isTopic = isTopic;
     }
 
-    private boolean isTopic;
-    private boolean isFinish = false;
+    public PageCacheWriteUnitQueue() {
 
-    private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue<>();
+    }
+
+    private boolean isTopic;
+    private boolean finishedSending = false;
+
+    private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue<>(Constants.WRITE_QUEUE_SIZE);
 
 
     public void putMessageInWriteQueue(DefaultBytesMessage message) throws InterruptedException {
@@ -22,15 +26,28 @@ public class PageCacheWriteUnitQueue {
         // queue.offer(message);
     }
 
+
     /**
      * take()方法和put()方法是对应的，从中拿一个数据，如果拿不到线程挂起
      * poll()方法和offer()方法是对应的，从中拿一个数据，如果没有直接返回null
      */
 
+    public void offer(DefaultBytesMessage message) {
+        queue.offer(message);
+    }
+
+    public DefaultBytesMessage poll() {
+        return queue.poll();
+    }
+
+    public boolean isEmpty() {
+        return queue.isEmpty();
+    }
+
     public DefaultBytesMessage getMessageFromWriteQueue() throws InterruptedException {
         //return queue.take();
         while (queue.isEmpty()) {
-            if (!isFinish) {
+            if (!finishedSending) {
                 Thread.sleep(10);
             } else {
                 return null;
@@ -47,7 +64,7 @@ public class PageCacheWriteUnitQueue {
         isTopic = topic;
     }
 
-    public void setFinish(boolean finish) {
-        isFinish = finish;
+    public void setFinishedSending(boolean finishedSending) {
+        this.finishedSending = finishedSending;
     }
 }
