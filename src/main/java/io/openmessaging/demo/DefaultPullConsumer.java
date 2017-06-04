@@ -114,9 +114,9 @@ public class DefaultPullConsumer implements PullConsumer {
                 //  System.out.println("take form queue");
                 return PageCacheReadUnitQueueManager.getBucketReadUnitQueue(queue).take();
             } else if (counter.get(queue).get() == queueMaxOffset) {
-                System.out.println("倒数第二个" + counter.get(queue).get() + "，max:" + queueMaxOffset);
+                // System.out.println("倒数第二个" + counter.get(queue).get() + "，max:" + queueMaxOffset);
                 try {
-                    System.out.println("sleep 100ms");
+                    // System.out.println("sleep 100ms");
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
