@@ -10,7 +10,7 @@ public class Constants {
 
 
     //    public static final int PAGE_SIZE = 1 << PAGE_SIZE_BITE_COUNT; //8M  COUNT=23
-    public static final int BYTE_BUFFER_NUMBER_IN_QUEUE = 30000;
+    public static final int BYTE_BUFFER_NUMBER_IN_QUEUE = 10000;
 
     public static final int BYTE_BUFFER_SIZE = 1024 * 256;
 
@@ -18,7 +18,7 @@ public class Constants {
 
     public static final int BIG_WRITE_PAGE_SIZE = 1024 * 1024 * 800;
 
-    public static final int MAPPED_BYTE_BUFF_PAGE_SIZE = 1024 * 1024 * 1;
+    public static final int MAPPED_BYTE_BUFF_PAGE_SIZE = 1024 * 1024 * 16;
 
     public static final int WRITE_QUEUE_SIZE = 10000;
 

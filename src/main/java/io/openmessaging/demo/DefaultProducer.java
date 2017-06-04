@@ -91,7 +91,9 @@ public class DefaultProducer implements Producer {
 //        } else {
 //            messageStore.putMessage(false, queue, message);
 //        }
-        messageStore.putMessage(message);
+        synchronized (DefaultProducer.class) {
+            messageStore.putMessage(message);
+        }
 
 
     }

@@ -3,6 +3,7 @@ package io.openmessaging.tester;
 import io.openmessaging.KeyValue;
 import io.openmessaging.Message;
 import io.openmessaging.Producer;
+import io.openmessaging.demo.DefaultProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +73,9 @@ public class ProducerTester {
 
                     logger.debug("queueOrTopic:{} offset:{}", queueOrTopic, label + "_" + offsets.get(queueOrTopic));
                     offsets.put(queueOrTopic, offsets.get(queueOrTopic) + 1);
-                    producer.send(message);
+                    synchronized (DefaultProducer.class) {
+                        producer.send(message);
+                    }
                     sendNum++;
                     if (sendNum >= Constants.PRO_MAX) {
                         break;

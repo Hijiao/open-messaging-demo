@@ -97,8 +97,8 @@ public class ConsumerTester {
                     String producer = body.substring(0, index);
                     int offset = Integer.parseInt(body.substring(index + 1));
                     if (offset != offsets.get(queueOrTopic).get(producer)) {
-                        logger.error("Offset not equal expected:{} actual:{} producer:{} queueOrTopic:{}",
-                                offsets.get(queueOrTopic).get(producer), offset, producer, queueOrTopic);
+                        logger.error("Offset not equal expected:{} actual:{} producer:{} queueOrTopic:{} messageBody:{}",
+                                offsets.get(queueOrTopic).get(producer), offset, producer, queueOrTopic, new String(message.getBody()));
                         // System.out.println(message);
                         break;
                     } else {

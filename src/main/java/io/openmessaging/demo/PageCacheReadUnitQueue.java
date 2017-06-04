@@ -36,20 +36,21 @@ public class PageCacheReadUnitQueue {
     }
 
     public void put(DefaultBytesMessage message) throws InterruptedException {
-        System.out.println(bucketName + " put one");
+//        System.out.println(bucketName + " put one");
 
         queue.put(message);
     }
 
     public DefaultBytesMessage poll() {
-        System.out.println(bucketName + " poll one");
-
-        return queue.poll();
+//        System.out.println(bucketName + " poll one");
+        synchronized (PageCacheReadUnitQueue.class) {
+            return queue.poll();
+        }
     }
 
     public DefaultBytesMessage take() {
         try {
-            System.out.println(bucketName + " take one");
+//            System.out.println(bucketName + " take one");
             return queue.take();
         } catch (InterruptedException e) {
             e.printStackTrace();

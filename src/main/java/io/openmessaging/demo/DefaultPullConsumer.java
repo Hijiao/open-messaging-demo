@@ -14,7 +14,7 @@ public class DefaultPullConsumer implements PullConsumer {
     private KeyValue properties;
     private String queue;
     private List<String> buckets = new ArrayList<>();
-    private Set<String> topics = new HashSet<>();
+    private List<String> topics = new ArrayList<>();
 
     private static volatile boolean fistInit = false;
 
@@ -87,63 +87,91 @@ public class DefaultPullConsumer implements PullConsumer {
 //        }
 //    }
 
-    @Override
-    public synchronized Message poll() {
-        DefaultBytesMessage message;
-
-        int queueOffset = counter.get(queue).get();
-
+    //    @Override
+//    public  Message poll() {
+//        DefaultBytesMessage message;
 //
-//        if (queueOffset > queueMaxOffset) {
-//            return null;
-//        }
-
-        Iterator<String> iterator = topics.iterator();
-        while (iterator.hasNext()) {
-            String topic = iterator.next();
-            //int offset = counter.get(topic).get();
-//            if (offset >= maxOffset.get(topic)) {
-//                System.out.println(topic + "remove. current queueOffset:" + queueOffset + ",maxOffset:" + queueMaxOffset);
-//                iterator.remove();
+//        int queueOffset = counter.get(queue).get();
+//
+////
+////        if (queueOffset > queueMaxOffset) {
+////            return null;
+////        }
+//
+//        Iterator<String> iterator = topics.iterator();
+//        while (iterator.hasNext()) {
+//            String topic = iterator.next();
+//            System.out.println(topic + " . current queueOffset:" + counter.get(topic).get() + ",maxOffset:" + maxOffset.get(topic));
+//            PageCacheReadUnitQueue readUnitQueue = PageCacheReadUnitQueueManager.getBucketReadUnitQueue(topic);
+//            message = readUnitQueue.poll();
+//            if (message != null) {
+////                System.out.println(topic + " current queueOffset:" + counter.get(topic).get() + ",maxOffset:" + maxOffset.get(topic));
+//                if (counter.get(topic).incrementAndGet() >= maxOffset.get(topic)) {
+//                    System.out.println(topic + "remove topic. current queueOffset:" + counter.get(topic).get() + ",maxOffset:" + maxOffset.get(topic));
+//                    iterator.remove();
+//                }
+//                return message;
 //            }
-            System.out.println(topic + " . current queueOffset:" + counter.get(topic).get() + ",maxOffset:" + maxOffset.get(topic));
+//        }
+//
+//        System.out.println(queue + " current queueOffset:" + counter.get(queue).get() + ",maxOffset:" + maxOffset.get(queue));
+//
+//
+//        if (counter.get(queue).incrementAndGet() <= queueMaxOffset) {
+//            return PageCacheReadUnitQueueManager.getBucketReadUnitQueue(queue).take();
+//        }
+//       while (!topics.isEmpty()) {
+//            this.poll();
+//        }
+//        int count = 0;
+//        for (Integer i : maxOffset.values()) {
+//            count += i;
+//        }
+//        System.out.println("count" + count);
+//        for (PageCacheReadUnitQueue q : PageCacheReadUnitQueueManager.getBucketReadUnitQueue().values()) {
+//            if (!q.isEmpty()) {
+//                System.out.println(counter.get(q.getBucketName()).get() + "" + q);
+//            }
+//        }
+//
+//
+//        return PageCacheReadUnitQueueManager.getBucketReadUnitQueue(queue).poll();
+//
+//
+//    }
 
-            PageCacheReadUnitQueue readUnitQueue = PageCacheReadUnitQueueManager.getBucketReadUnitQueue(topic);
-            message = readUnitQueue.poll();
-            if (message != null) {
-//                System.out.println(topic + " current queueOffset:" + counter.get(topic).get() + ",maxOffset:" + maxOffset.get(topic));
-                if (counter.get(topic).incrementAndGet() >= maxOffset.get(topic)) {
-                    System.out.println(topic + "remove topic. current queueOffset:" + counter.get(topic).get() + ",maxOffset:" + maxOffset.get(topic));
-                    iterator.remove();
+    private static int readCount = 0;
+
+    @Override
+    public Message poll() {
+        DefaultBytesMessage message;
+        while (!buckets.isEmpty()) {
+            Iterator<String> iterator = buckets.iterator();
+            while (iterator.hasNext()) {
+                String buckets = iterator.next();
+                //  System.out.println(topic + " . current queueOffset:" + counter.get(topic).get() + ",maxOffset:" + maxOffset.get(topic));
+                PageCacheReadUnitQueue readUnitQueue = PageCacheReadUnitQueueManager.getBucketReadUnitQueue(buckets);
+                message = readUnitQueue.poll();
+                if (message != null) {
+                    //readCount++;
+                    //   System.out.println(buckets + " current queueOffset:" + counter.get(buckets).get() + ",maxOffset:" + maxOffset.get(buckets));
+                    if (counter.get(buckets).incrementAndGet() >= maxOffset.get(buckets)) {
+                        //                           System.out.println(buckets + "remove topic. current queueOffset:" + counter.get(buckets).get() + ",maxOffset:" + maxOffset.get(buckets));
+                        iterator.remove();
+                    }
+                    return message;
                 }
-                return message;
             }
+            //return  PageCacheReadUnitQueueManager.getBucketReadUnitQueue(queue).take();
         }
 
-        System.out.println(queue + " current queueOffset:" + counter.get(queue).get() + ",maxOffset:" + maxOffset.get(queue));
-
-
-        if (counter.get(queue).incrementAndGet() <= queueMaxOffset) {
-            return PageCacheReadUnitQueueManager.getBucketReadUnitQueue(queue).take();
-        }
-
-        if (!topics.isEmpty()) {
-            System.out.println(topics);
-            this.poll();
-        }
-        int count = 0;
-        for (Integer i : maxOffset.values()) {
-            count += i;
-        }
-        System.out.println("count" + count);
-        for (PageCacheReadUnitQueue q : PageCacheReadUnitQueueManager.getBucketReadUnitQueue().values()) {
-            if (!q.isEmpty()) {
-                System.out.println(counter.get(q.getBucketName()).get() + "" + q);
-            }
-        }
-
-        return PageCacheReadUnitQueueManager.getBucketReadUnitQueue(queue).poll();
-
+//        int count = 0;
+//        for (Integer i : maxOffset.values()) {
+//            count += i;
+//        }
+//        System.out.println("countAll:"+count);
+//        System.out.println("readCount:"+readCount);
+        return null;
 
     }
 
@@ -170,8 +198,9 @@ public class DefaultPullConsumer implements PullConsumer {
         queue = queueName;
 
         this.topics.addAll(topics);
-        buckets.add(queueName);
         buckets.addAll(topics);
+        Collections.sort(buckets);
+        buckets.add(queueName);
 
         for (String bucket : buckets) {
             PageCacheReadUnitQueueManager.intPageCacheReadUnitQueue(bucket);
