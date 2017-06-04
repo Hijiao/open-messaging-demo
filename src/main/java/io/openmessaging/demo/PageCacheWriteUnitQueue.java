@@ -1,5 +1,6 @@
 package io.openmessaging.demo;
 
+import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -24,6 +25,10 @@ public class PageCacheWriteUnitQueue {
     public void putMessageInWriteQueue(DefaultBytesMessage message) throws InterruptedException {
         queue.put(message);
         // queue.offer(message);
+    }
+
+    public void addAll(List<DefaultBytesMessage> messages) {
+        queue.addAll(messages);
     }
 
 

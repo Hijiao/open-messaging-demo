@@ -3,9 +3,7 @@ package io.openmessaging.demo;
 
 import io.openmessaging.Message;
 
-import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
 
 /**
  * Created by Max on 2017/5/19.
@@ -19,9 +17,7 @@ public class MessageFileStore {
     }
 
 
-    private Map<String, Queue<DefaultBytesMessage>> beforeWriteBodyMap = new ConcurrentHashMap<>();
-
-    private PageCacheReadUnitQueueManager readUnitQueueManager = PageCacheReadUnitQueueManager.getInstance();
+    private static PageCacheWriteUnitQueue queue = PageCacheWriteUnitQueueManager.getWriteQueue();
 
 
     public void putMessage(Message message) {
@@ -39,14 +35,13 @@ public class MessageFileStore {
 ////        beforeWriteBodyQueue.add((DefaultBytesMessage) message);
 //        PageCacheWriteUnitQueue queue = writeQueueManager.getBucketWriteQueue(bucket);
 
-        PageCacheWriteUnitQueue queue = PageCacheWriteUnitQueueManager.getWriteQueue();
-        queue.offer((DefaultBytesMessage) message);
+        queue.put((DefaultBytesMessage) message);
 
     }
 
-
-
-
+    public void putAllMessages(List<DefaultBytesMessage> messages) {
+        queue.addAll(messages);
+    }
 
 
     public synchronized void flushWriteBuffers() {

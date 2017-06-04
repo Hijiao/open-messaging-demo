@@ -10,6 +10,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
 
@@ -53,8 +54,9 @@ public class PageCacheManager extends Thread {
     public void run() {
         try {
             while (true) {
-                DefaultBytesMessage message = writeQueue.take();
-                if (message != null) {
+                ArrayList<DefaultBytesMessage> ship = PageCacheWriteUnitQueueManager.getLoadedShips().take();
+                System.out.println("get one load ship");
+                for (DefaultBytesMessage message : ship) {
                     String bucketName = message.headers().getString(MessageHeader.TOPIC);
                     if (bucketName == null) {
                         bucketName = message.headers().getString(MessageHeader.QUEUE);
@@ -63,6 +65,8 @@ public class PageCacheManager extends Thread {
                     bucketsOffsetMap.put(bucketName, ++offset);
                     writeMessage(offset, message);
                 }
+                PageCacheWriteUnitQueueManager.getEmptyShips().put(true);
+
             }
         } catch (Exception e) {
             e.printStackTrace();

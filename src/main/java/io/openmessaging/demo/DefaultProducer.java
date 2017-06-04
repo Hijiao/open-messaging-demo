@@ -2,6 +2,8 @@ package io.openmessaging.demo;
 
 import io.openmessaging.*;
 
+import java.util.ArrayList;
+
 public class DefaultProducer implements Producer {
 
     private MessageFactory messageFactory = new DefaultMessageFactory();
@@ -21,11 +23,13 @@ public class DefaultProducer implements Producer {
             if (!fistInit) {
                 PageCacheManager.getInstance().setStorePath(properties.getString("STORE_PATH"));
                 PageCacheManager.getInstance().start();
+                PageCacheWriteUnitQueueManager.initShips();
                 fistInit = true;
             }
         }
     }
 
+    private ArrayList<DefaultBytesMessage> beforeWriteBuffer = new ArrayList<>(Constants.WRITE_SHIP_CAPACITY);
 
     @Override
     public BytesMessage createBytesMessageToTopic(String topic, byte[] body) {
@@ -91,12 +95,14 @@ public class DefaultProducer implements Producer {
 //        } else {
 //            messageStore.putMessage(false, queue, message);
 //        }
-        synchronized (DefaultProducer.class) {
-            messageStore.putMessage(message);
+
+        if (beforeWriteBuffer.size() == Constants.WRITE_SHIP_CAPACITY) {
+            loadShip();
+        } else {
+            beforeWriteBuffer.add((DefaultBytesMessage) message);
         }
-
-
     }
+
 
     @Override
     public void send(Message message, KeyValue properties) {
@@ -133,6 +139,23 @@ public class DefaultProducer implements Producer {
         throw new UnsupportedOperationException("Unsupported");
     }
 
+
+    private void loadShip() {
+        System.out.println("loading one ship");
+        try {
+            if (PageCacheWriteUnitQueueManager.getEmptyShips().take()) {
+                ArrayList<DefaultBytesMessage> ship = new ArrayList<>(Constants.WRITE_SHIP_CAPACITY);
+                System.out.println("size :" + ship.size() + beforeWriteBuffer.size());
+                PageCacheWriteUnitQueueManager.getLoadedShips().put(beforeWriteBuffer);
+            }
+
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+    }
+
     @Override
     public void flush() {
 //        BlockingQueue<Runnable> queue=executor.getThreads();
@@ -140,6 +163,7 @@ public class DefaultProducer implements Producer {
 //        for (Runnable r :queue){
 //            (PageCacheWriteUnitQueueManager)r.
 //        }
+        loadShip();
         messageStore.flushWriteBuffers();
         PageCacheManager.getInstance().flushOffsetToFile();
 //        //手动刷掉缓存

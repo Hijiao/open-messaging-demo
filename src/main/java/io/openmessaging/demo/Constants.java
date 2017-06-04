@@ -17,8 +17,13 @@ public class Constants {
 
     public static final int MAPPED_BYTE_BUFF_PAGE_SIZE = 1024 * 1024 * 512;
 
-    public static final int WRITE_QUEUE_SIZE = 60000;
+    public static final int WRITE_QUEUE_SIZE = 50000;
 
+    public static final int BEFORE_WRITE_MESSAGE_BUFFER_SIZE = 400;
+
+    public static final int BWRITE_SHIP_NUMBER = 20;
+
+    public static final int WRITE_SHIP_CAPACITY = 2000;
 
     //consumer消费时，连续读QUEUE、Topic都为空则判断结束；
     public static final int POLL_TRY_COUNT = 3;
