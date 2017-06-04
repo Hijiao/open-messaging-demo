@@ -28,6 +28,10 @@ public class PageCacheReadUnitQueue {
         // queue.offer(messageBody);
     }
 
+    public void offer(DefaultBytesMessage message) {
+        queue.offer(message);
+    }
+
     public void put(DefaultBytesMessage message) throws InterruptedException {
         queue.put(message);
     }

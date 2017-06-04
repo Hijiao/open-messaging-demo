@@ -42,7 +42,7 @@ public class PageCacheReaderManager extends Thread {
 
     public void setStorePath(String path) {
         storePath = path;
-        initRandomFile();
+        randAccessFile = initRandomFile();
     }
 
 
@@ -61,11 +61,89 @@ public class PageCacheReaderManager extends Thread {
     }
 
     public void run() {
-        Map<String, DefaultBytesMessage> map = MessageMap.getInstance().getMap();
-        while (!isReadFinished) {
-            getMessageFromFileAndSentToMap(map);
+//        Map<String, DefaultBytesMessage> map = MessageMap.getInstance().getMap();
+//        while (!isReadFinished) {
+//
+//            getMessageFromFileAndSentToMap(map);
+//        }
+
+        while (true) {
+            DefaultBytesMessage message = getMessageFromFile();
+            if (message != null) {
+                String bucketName = message.headers().getString(MessageHeader.TOPIC);
+                if (bucketName == null) {
+                    bucketName = message.headers().getString(MessageHeader.QUEUE);
+                }
+                try {
+                    PageCacheReadUnitQueueManager.getBucketReadUnitQueue(bucketName).offer(message);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    break;
+                }
+            }
         }
 
+    }
+
+    private DefaultBytesMessage getMessageFromFile() {
+        String key = null;
+        DefaultBytesMessage message = new DefaultBytesMessage();
+
+        hasPackagedOneMessage = false;
+        if (currPage == null && currPageNumber == -1) {
+            createNewPageToRead(++currPageNumber);
+        }
+        if (currPage == null) {
+            isReadFinished = true;
+            return null;
+        }
+        //int offset = getNextIntFromCurrPage();
+
+        while ((!hasPackagedOneMessage) && (!finishFlag)) {
+            byte currByte = getNextByteFromCurrPage();
+            if (currByte != MARKER_PREFIX) {
+                if (currByte == 0x00) {
+                    return null;
+                }
+                tmpByteBuffer.put(currByte);
+            } else {
+                byte byteType = getNextByteFromCurrPage();
+                switch (byteType) {
+                    case HEADER_KEY_END_MARKER:
+                        //tmpByteBuffer.flip();
+                        key = new String(tmpByteBuffer.array(), 0, tmpByteBuffer.position());
+                        break;
+                    case HEADER_VALUE_END_MARKER:
+                        message.putHeaders(key, new String(tmpByteBuffer.array(), 0, tmpByteBuffer.position()));
+                        key = null;
+                        break;
+                    case PRO_KEY_END_MARKER:
+                        key = new String(tmpByteBuffer.array(), 0, tmpByteBuffer.position());
+                        break;
+                    case PRO_VALUE_END_MARKER:
+                        message.putProperties(key, new String(tmpByteBuffer.array(), 0, tmpByteBuffer.position()));
+                        key = null;
+                        break;
+                    case MESSAGE_END_MARKER:
+                        int bodyLen = tmpByteBuffer.position();
+                        byte[] body = new byte[bodyLen];
+                        System.arraycopy(tmpByteBuffer.array(), 0, body, 0, bodyLen);
+                        tmpByteBuffer.rewind();
+                        tmpByteBuffer.get(body);
+                        message.setBody(body);
+                        hasPackagedOneMessage = true;
+                        body = null;
+                        break;
+                }
+            }
+        }
+        if (hasPackagedOneMessage) {
+            System.out.println(message);
+            return message;
+        }
+
+        return null;
     }
 
 

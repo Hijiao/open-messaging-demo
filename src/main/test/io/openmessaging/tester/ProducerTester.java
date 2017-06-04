@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Max on 2017/5/26.
@@ -18,7 +17,6 @@ public class ProducerTester {
 
     static Logger logger = LoggerFactory.getLogger(ProducerTester.class);
     //0表示默认;
-    static AtomicInteger state = new AtomicInteger(0);
     static String errorMessage = "";
 
     static class ProducerTask extends Thread {

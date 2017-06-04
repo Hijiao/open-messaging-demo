@@ -59,14 +59,14 @@ public class MessageFileStore {
     }
 
 
-    public Message pullMessage(String bucketNameAndOffset) {
+    public Message pullMessageFromMap(String bucketNameAndOffset) {
 
         return MessageMap.getInstance().getMessage(bucketNameAndOffset);
 
     }
 
-    public Message pullMessage(List<String> buckets) {
 
+    public Message pullMessage(List<String> buckets) {
 
         boolean stopFlag = false;
         while (!stopFlag) {

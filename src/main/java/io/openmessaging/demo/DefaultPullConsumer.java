@@ -14,6 +14,7 @@ public class DefaultPullConsumer implements PullConsumer {
     private KeyValue properties;
     private String queue;
     private List<String> buckets = new ArrayList<>();
+    private Set<String> topics = new HashSet<>();
 
     private static volatile boolean fistInit = false;
 
@@ -40,7 +41,7 @@ public class DefaultPullConsumer implements PullConsumer {
 
         try {
 
-            File file = new File(storePath);
+            File file = new File(storePath + File.separator + "offset.txt");
             FileInputStream in = new FileInputStream(file);
             int size = in.available();
 
@@ -53,8 +54,6 @@ public class DefaultPullConsumer implements PullConsumer {
             String[] records = s.split(",");
 
             for (String record : records) {
-                System.out.println(record.split("=")[0]);
-                System.out.println(record.split("=")[1]);
                 PageCacheReadUnitQueueManager.intPageCacheReadUnitQueue(record.split("=")[0]);
                 maxOffset.put(record.split("=")[0], Integer.parseInt(record.split("=")[1]));
                 counter.put(record.split("=")[0], new AtomicInteger());
@@ -89,18 +88,30 @@ public class DefaultPullConsumer implements PullConsumer {
 
     @Override
     public Message poll() {
-
-        for (String bucket : buckets) {
-            int offset = counter.get(bucket).decrementAndGet();
-            if (offset > maxOffset.get(bucket)) {
+        DefaultBytesMessage message;
+        while (true) {
+            if (buckets.isEmpty()) {
                 return null;
             }
+            Iterator<String> iterator = buckets.iterator();
+            while (iterator.hasNext()) {
+                String bucket = iterator.next();
+                int offset = counter.get(bucket).get();
+                if (offset > maxOffset.get(bucket)) {
+                    iterator.remove();
 
-            Message message = messageStore.pullMessage()
-
+                }
+                PageCacheReadUnitQueue readUnitQueue = PageCacheReadUnitQueueManager.getBucketReadUnitQueue(bucket);
+                if (readUnitQueue.isEmpty()) {
+                    break;
+                } else {
+                    message = readUnitQueue.poll();
+                    if (message != null) {
+                        return message;
+                    }
+                }
+            }
         }
-
-        return messageStore.pullMessage(buckets);
 
     }
 
@@ -125,6 +136,8 @@ public class DefaultPullConsumer implements PullConsumer {
             throw new ClientOMSException("You have alreadly attached to a queue " + queue);
         }
         queue = queueName;
+
+        this.topics.addAll(topics);
         buckets.add(queueName);
         buckets.addAll(topics);
 

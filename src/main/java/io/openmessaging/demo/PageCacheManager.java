@@ -59,7 +59,6 @@ public class PageCacheManager extends Thread {
                     bucketName = message.headers().getString(MessageHeader.QUEUE);
                 }
                 int offset = bucketsOffsetMap.getInt(bucketName);
-
                 bucketsOffsetMap.put(bucketName, ++offset);
                 writeMessage(offset, message);
             }
@@ -73,7 +72,7 @@ public class PageCacheManager extends Thread {
         try {
             FileWriter fw = new FileWriter(builder.toString());
             fw.write(bucketsOffsetMap.toString());
-            System.out.println(bucketsOffsetMap.toString());
+            //System.out.println(bucketsOffsetMap.toString());
             fw.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -127,7 +126,8 @@ public class PageCacheManager extends Thread {
     public void writeMessage(Integer offset, DefaultBytesMessage message) {
         String key;
         byteBuffer.clear();
-        byteBuffer.putInt(offset);
+
+        //byteBuffer.putInt(offset);
         if (currPage == null) {
             currPage = createNewPageToWrite(++currPageNumber);
         }
