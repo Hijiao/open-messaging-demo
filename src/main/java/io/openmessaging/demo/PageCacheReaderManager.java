@@ -78,6 +78,7 @@ public class PageCacheReaderManager extends Thread {
                     String bucketName = message.headers().getString(MessageHeader.TOPIC);
                     if (bucketName == null)
                         bucketName = message.headers().getString(MessageHeader.QUEUE);
+                    // System.out.println("bucketName in reader :" + bucketName);
                     PageCacheReadUnitQueueManager.getBucketReadUnitQueue(bucketName).offer(message);
 
                 }

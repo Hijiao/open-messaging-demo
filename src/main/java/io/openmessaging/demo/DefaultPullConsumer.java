@@ -55,6 +55,8 @@ public class DefaultPullConsumer implements PullConsumer {
                 maxOffset.put(record.split("=")[0], Integer.parseInt(record.split("=")[1]));
                 counter.put(record.split("=")[0], new AtomicInteger());
             }
+
+
             PageCacheReaderManager.getInstance().setStorePath(storePath);
             PageCacheReaderManager.getInstance().start();
 
@@ -96,7 +98,7 @@ public class DefaultPullConsumer implements PullConsumer {
                 PageCacheReadUnitQueue readUnitQueue = PageCacheReadUnitQueueManager.getBucketReadUnitQueue(topic);
                 message = readUnitQueue.poll();
                 if (message != null) {
-                    System.out.println(topic + " current queueOffset:" + counter.get(topic).get() + ",maxOffset:" + maxOffset.get(topic) + ", " + message);
+//                    System.out.println(topic + " current queueOffset:" + counter.get(topic).get() + ",maxOffset:" + maxOffset.get(topic) + ", " + message);
                     if (counter.get(topic).incrementAndGet() >= maxOffset.get(topic)) {
                         System.out.println(topic + "remove topic. current queueOffset:" + counter.get(topic).get() + ",maxOffset:" + maxOffset.get(topic));
                         iterator.remove();

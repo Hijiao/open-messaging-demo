@@ -12,11 +12,11 @@ public class PageCacheReadUnitQueue {
     // private DefaultBytesMessage message;
 
     public PageCacheReadUnitQueue(String bucketName) {
-        System.out.println("init PageCacheReadUnitQueue:" + bucketName);
+        //System.out.println("init PageCacheReadUnitQueue:" + bucketName);
         this.bucketName = bucketName;
     }
 
-    private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue(Constants.BYTE_BUFFER_NUMBER_IN_QUEUE);
+    private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue();
 
     public String getBucketName() {
         return bucketName;

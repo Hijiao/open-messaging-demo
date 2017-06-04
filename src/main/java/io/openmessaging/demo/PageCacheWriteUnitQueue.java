@@ -18,7 +18,7 @@ public class PageCacheWriteUnitQueue {
     private boolean isTopic;
     private boolean finishedSending = false;
 
-    private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue<>(Constants.WRITE_QUEUE_SIZE);
+    private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue<>();
 
 
     public void putMessageInWriteQueue(DefaultBytesMessage message) throws InterruptedException {

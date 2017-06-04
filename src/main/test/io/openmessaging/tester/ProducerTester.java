@@ -58,27 +58,29 @@ public class ProducerTester {
         public void run() {
             while (true) {
                 try {
-                    Message message;
-                    String queueOrTopic;
-                    if (sendNum % 10 == 0) {
-                        queueOrTopic = "QUEUE_" + random.nextInt(10);
-
-                        //queueOrTopic = "QUEUE_" + random.nextInt(10);
-                    } else {
-                        queueOrTopic = "TOPIC_" + random.nextInt(10);
-                        //message = producer.createBytesMessageToTopic(queueOrTopic, (label + "_" + offsets.get(queueOrTopic)).getBytes());
-
-                    }
-                    message = producer.createBytesMessageToQueue(queueOrTopic, (label + "_" + offsets.get(queueOrTopic)).getBytes());
-
-                    logger.debug("queueOrTopic:{} offset:{}", queueOrTopic, label + "_" + offsets.get(queueOrTopic));
-                    offsets.put(queueOrTopic, offsets.get(queueOrTopic) + 1);
                     synchronized (DefaultProducer.class) {
+                        Message message;
+                        String queueOrTopic;
+                        if (sendNum % 10 == 0) {
+                            queueOrTopic = "QUEUE_" + random.nextInt(10);
+
+                            //queueOrTopic = "QUEUE_" + random.nextInt(10);
+                        } else {
+                            queueOrTopic = "TOPIC_" + random.nextInt(10);
+                            //message = producer.createBytesMessageToTopic(queueOrTopic, (label + "_" + offsets.get(queueOrTopic)).getBytes());
+
+                        }
+                        message = producer.createBytesMessageToQueue(queueOrTopic, (label + "_" + offsets.get(queueOrTopic)).getBytes());
+
+                        logger.debug("queueOrTopic:{} offset:{}", queueOrTopic, label + "_" + offsets.get(queueOrTopic));
+                        offsets.put(queueOrTopic, offsets.get(queueOrTopic) + 1);
+
                         producer.send(message);
-                    }
-                    sendNum++;
-                    if (sendNum >= Constants.PRO_MAX) {
-                        break;
+
+                        sendNum++;
+                        if (sendNum >= Constants.PRO_MAX) {
+                            break;
+                        }
                     }
                 } catch (Exception e) {
                     logger.error("Error occurred in the sending process", e);
