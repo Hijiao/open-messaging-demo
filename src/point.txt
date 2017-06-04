@@ -60,3 +60,5 @@
 [2017-06-02 16:07:15,926] Produce Finished, sendNum 40000000, Cost 139924 ms
 
 [2017-06-03 11:13:58,125] Produce Finished, sendNum 40000000, Cost 143442 ms
+
+[2017-06-04 23:05:45,130] Produce Finished, sendNum 40000000, Cost 62044 ms 单线程写，map单个文件

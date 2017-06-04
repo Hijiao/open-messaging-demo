@@ -77,6 +77,7 @@ public class PageCacheManager extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        currPage.force();
     }
 
     public PageCacheManager(String bucket, String storePath, boolean isTopic) {
@@ -126,7 +127,6 @@ public class PageCacheManager extends Thread {
     public void writeMessage(Integer offset, DefaultBytesMessage message) {
         String key;
         byteBuffer.clear();
-
         //byteBuffer.putInt(offset);
         if (currPage == null) {
             currPage = createNewPageToWrite(++currPageNumber);

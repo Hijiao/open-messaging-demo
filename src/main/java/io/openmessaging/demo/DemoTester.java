@@ -53,6 +53,7 @@ public class DemoTester {
             producer.send(messagesForQueue2.get(i));
         }
         long end = System.currentTimeMillis();
+        producer.flush();
 
         long T1 = end - start;
         //show all data in file store

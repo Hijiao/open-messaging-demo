@@ -3,7 +3,6 @@ package io.openmessaging.demo;
 
 import io.openmessaging.Message;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,41 +45,8 @@ public class MessageFileStore {
     }
 
 
-    private void sendBatchMessageToQueue(Queue<DefaultBytesMessage> beforeWriteBodyQueue, PageCacheWriteUnitQueue queue) {
-        try {
-            while (!beforeWriteBodyQueue.isEmpty()) {
-                queue.putMessageInWriteQueue(beforeWriteBodyQueue.poll());
-            }
-
-            beforeWriteBodyQueue.clear();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
 
 
-    public Message pullMessageFromMap(String bucketNameAndOffset) {
-
-        return MessageMap.getInstance().getMessage(bucketNameAndOffset);
-
-    }
-
-
-    public Message pullMessage(List<String> buckets) {
-
-        boolean stopFlag = false;
-        while (!stopFlag) {
-            for (String bucket : buckets) {
-                PageCacheReadUnitQueue readUnitQueue = PageCacheReadUnitQueueManager.getBucketReadUnitQueue(bucket);
-                DefaultBytesMessage message = readUnitQueue.poll();
-                if (message != null) {
-                    return message;
-                }
-            }
-        }
-        //queue 和topic 都为空
-        return null;
-    }
 
 
     public synchronized void flushWriteBuffers() {

@@ -71,7 +71,10 @@ public class ConsumerTester {
         public void run() {
             while (true) {
                 try {
-                    BytesMessage message = (BytesMessage) consumer.poll();
+                    BytesMessage message;
+                    synchronized (ConsumerTester.class) {
+                        message = (BytesMessage) consumer.poll();
+                    }
                     if (message == null) {
 //                        System.out.println("stop one : " + Thread.currentThread().getName());
                         break;
@@ -87,18 +90,14 @@ public class ConsumerTester {
                     }
                     String body = new String(message.getBody(), Charset.forName("UTF-8"));
 //                    if (message.headers().getString(MessageHeader.TOPIC) != null) {
-                    if (count < 10) {
-                        ++count;
-//                        System.out.println("----------------> " + Thread.currentThread().getName() + " : " + pullNum + "body--> " + body);
-//                        System.out.println(message);
-                    }
+
 //                    }
                     int index = body.lastIndexOf("_");
                     String producer = body.substring(0, index);
                     int offset = Integer.parseInt(body.substring(index + 1));
                     if (offset != offsets.get(queueOrTopic).get(producer)) {
-                        logger.error("Offset not equal expected:{} actual:{} producer:{} queueOrTopic:{} messageBody:{}",
-                                offsets.get(queueOrTopic).get(producer), offset, producer, queueOrTopic, new String(message.getBody()));
+                        logger.error("Offset not equal expected:{} actual:{} producer:{} queueOrTopic:{} message:{}",
+                                offsets.get(queueOrTopic).get(producer), offset, producer, queueOrTopic, message);
                         // System.out.println(message);
                         break;
                     } else {

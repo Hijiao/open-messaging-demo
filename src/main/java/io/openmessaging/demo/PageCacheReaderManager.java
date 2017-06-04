@@ -4,14 +4,12 @@ import io.openmessaging.MessageHeader;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static io.openmessaging.demo.Constants.*;
-import static io.openmessaging.demo.PageCacheManager.unmap;
 
 /**
  * Created by Max on 2017/6/2.
@@ -43,11 +41,17 @@ public class PageCacheReaderManager extends Thread {
     public void setStorePath(String path) {
         storePath = path;
         randAccessFile = initRandomFile();
+        initPageCache();
+
     }
 
 
     RandomAccessFile randAccessFile;
 
+
+    private void initPageCache() {
+        createNewPageToRead();
+    }
 
     private RandomAccessFile initRandomFile() {
         StringBuilder builder = new StringBuilder();
@@ -91,16 +95,13 @@ public class PageCacheReaderManager extends Thread {
         DefaultBytesMessage message = new DefaultBytesMessage();
 
         hasPackagedOneMessage = false;
-        if (currPage == null && currPageNumber == -1) {
-            createNewPageToRead(++currPageNumber);
-        }
         if (currPage == null) {
             isReadFinished = true;
             return null;
         }
         //int offset = getNextIntFromCurrPage();
 
-        while ((!hasPackagedOneMessage) && (!finishFlag)) {
+        while ((!hasPackagedOneMessage) && (currPage.hasRemaining())) {
             byte currByte = getNextByteFromCurrPage();
             if (currByte != MARKER_PREFIX) {
                 if (currByte == 0x00) {
@@ -149,65 +150,39 @@ public class PageCacheReaderManager extends Thread {
     }
 
 
-    private void createNewPageToRead(int index) {
-        if (index != 0) {
-            unmap(currPage);
-            // closeCurrPage();
-            currPage = null;
-            System.gc();
-        }
+    private void createNewPageToRead() {
 
         try {
-            currPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * (index + 1));
+//            currPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * (index + 1));
+            currPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, randAccessFile.length());
+
         } catch (Exception e) {
-            //e.printStackTrace();
-            try {
-                currPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index, randAccessFile.length() - Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index);
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-
+            e.printStackTrace();
             currPage = null;
+//            try {
+//                currPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index, (randAccessFile.length() - Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index) > 0 ? randAccessFile.length() - Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index : randAccessFile.length());
+//            } catch (IOException e1) {
+//                e1.printStackTrace();
+//                currPage = null;
+//            }
+
         }
 
     }
 
-    private Integer getNextIntFromCurrPage() {
-
-        int remain = currPage.remaining();
-        if (remain > 4) {
-            return currPage.getInt();
-        }
-        byte[] b = new byte[4];
-        for (int i = 0; i < remain; i++) {
-            b[i] = currPage.get();
-        }
-        createNewPageToRead(++currPageNumber);
-
-        for (int i = remain; i < 4; i++) {
-            b[i] = currPage.get();
-        }
-
-
-        return b[3] & 0xFF |
-                (b[2] & 0xFF) << 8 |
-                (b[1] & 0xFF) << 16 |
-                (b[0] & 0xFF) << 24;
-
-    }
 
     private byte getNextByteFromCurrPage() {
 
-        if (currPage != null) {
-            if (currPage.hasRemaining()) {
-                return currPage.get();
-            } else {
-                createNewPageToRead(++currPageNumber);
-
-            }
-        }
-        if (currPage == null)
-            return MARKER_PREFIX;//连着返回两次，则认为文件读取结束
+//        if (currPage != null) {
+//            if (currPage.hasRemaining()) {
+//                return currPage.get();
+//            } else {
+//                createNewPageToRead(++currPageNumber);
+//
+//            }
+//        }
+//        if (currPage == null)
+//            return MARKER_PREFIX;//连着返回两次，则认为文件读取结束
         return currPage.get();
     }
 

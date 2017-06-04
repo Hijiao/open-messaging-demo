@@ -88,6 +88,7 @@ public class ProducerTester {
         }
 
         public void flush() {
+            System.out.println("product flushed");
             producer.flush();
 
         }
