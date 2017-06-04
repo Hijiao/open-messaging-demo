@@ -20,22 +20,33 @@ public class DemoTestSingle {
         b.putProperties("PRO_OFFSET", "PRODUCER1_1");
         b.putProperties("dprq1", "s465d");
         producer.send(b);
+
+
+        BytesMessage c = producer.createBytesMessageToQueue("QUEUE", ("QUEUE" + 1).getBytes());
+        c.putHeaders("MessageId", "cccc");
+        c.putProperties("PRO_OFFSET", "PRODUCER1_1");
+        c.putProperties("dprq1", "s465d");
+        producer.send(c);
+
+
         producer.flush();
 
         PullConsumer consumer = new DefaultPullConsumer(properties);
-        consumer.attachQueue("qq", Collections.singletonList(topic1));
+        consumer.attachQueue("QUEUE", Collections.singletonList(topic1));
 
         try {
             Thread.sleep(100);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
-        Message result = consumer.poll();
-        System.out.println("result: " + result);
-
-        String topicName = result.headers().getString(MessageHeader.TOPIC);
-        System.out.println("topicName:" + topicName);
+        while (true) {
+            Message result = consumer.poll();
+            if (result == null) {
+                System.out.println("exit ");
+                break;
+            }
+            System.out.println("result:" + result);
+        }
 
 
     }

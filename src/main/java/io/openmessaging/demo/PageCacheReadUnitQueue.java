@@ -17,6 +17,9 @@ public class PageCacheReadUnitQueue {
 
     private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue(Constants.BYTE_BUFFER_NUMBER_IN_QUEUE);
 
+    public String getBucketName() {
+        return bucketName;
+    }
 
     /**
      * take()方法和put()方法是对应的，从中拿一个数据，如果拿不到线程挂起
@@ -33,11 +36,25 @@ public class PageCacheReadUnitQueue {
     }
 
     public void put(DefaultBytesMessage message) throws InterruptedException {
+        System.out.println(bucketName + " put one");
+
         queue.put(message);
     }
 
     public DefaultBytesMessage poll() {
+        System.out.println(bucketName + " poll one");
+
         return queue.poll();
+    }
+
+    public DefaultBytesMessage take() {
+        try {
+            System.out.println(bucketName + " take one");
+            return queue.take();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public boolean isEmpty() {
@@ -73,4 +90,12 @@ public class PageCacheReadUnitQueue {
         isFinish = finish;
     }
 
+    @Override
+    public String toString() {
+        return "PageCacheReadUnitQueue{" +
+                "isFinish=" + isFinish +
+                ", bucketName='" + bucketName + '\'' +
+                ", queue=" + queue +
+                '}';
+    }
 }

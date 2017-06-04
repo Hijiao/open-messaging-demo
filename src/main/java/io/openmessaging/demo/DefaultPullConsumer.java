@@ -33,6 +33,7 @@ public class DefaultPullConsumer implements PullConsumer {
 
     private static final Map<String, Integer> maxOffset = new HashMap<>();
 
+    int queueMaxOffset = 0;
 
     private static void init(String storePath) {
         PageCacheReaderManager.getInstance().setStorePath(storePath);
@@ -87,31 +88,62 @@ public class DefaultPullConsumer implements PullConsumer {
 //    }
 
     @Override
-    public Message poll() {
+    public synchronized Message poll() {
         DefaultBytesMessage message;
-        while (true) {
-            if (buckets.isEmpty()) {
-                return null;
-            }
-            Iterator<String> iterator = buckets.iterator();
-            while (iterator.hasNext()) {
-                String bucket = iterator.next();
-                int offset = counter.get(bucket).get();
-                if (offset > maxOffset.get(bucket)) {
-                    iterator.remove();
 
+        int queueOffset = counter.get(queue).get();
+
+//
+//        if (queueOffset > queueMaxOffset) {
+//            return null;
+//        }
+
+        Iterator<String> iterator = topics.iterator();
+        while (iterator.hasNext()) {
+            String topic = iterator.next();
+            //int offset = counter.get(topic).get();
+//            if (offset >= maxOffset.get(topic)) {
+//                System.out.println(topic + "remove. current queueOffset:" + queueOffset + ",maxOffset:" + queueMaxOffset);
+//                iterator.remove();
+//            }
+            System.out.println(topic + " . current queueOffset:" + counter.get(topic).get() + ",maxOffset:" + maxOffset.get(topic));
+
+            PageCacheReadUnitQueue readUnitQueue = PageCacheReadUnitQueueManager.getBucketReadUnitQueue(topic);
+            message = readUnitQueue.poll();
+            if (message != null) {
+//                System.out.println(topic + " current queueOffset:" + counter.get(topic).get() + ",maxOffset:" + maxOffset.get(topic));
+                if (counter.get(topic).incrementAndGet() >= maxOffset.get(topic)) {
+                    System.out.println(topic + "remove topic. current queueOffset:" + counter.get(topic).get() + ",maxOffset:" + maxOffset.get(topic));
+                    iterator.remove();
                 }
-                PageCacheReadUnitQueue readUnitQueue = PageCacheReadUnitQueueManager.getBucketReadUnitQueue(bucket);
-                if (readUnitQueue.isEmpty()) {
-                    break;
-                } else {
-                    message = readUnitQueue.poll();
-                    if (message != null) {
-                        return message;
-                    }
-                }
+                return message;
             }
         }
+
+        System.out.println(queue + " current queueOffset:" + counter.get(queue).get() + ",maxOffset:" + maxOffset.get(queue));
+
+
+        if (counter.get(queue).incrementAndGet() <= queueMaxOffset) {
+            return PageCacheReadUnitQueueManager.getBucketReadUnitQueue(queue).take();
+        }
+
+        if (!topics.isEmpty()) {
+            System.out.println(topics);
+            this.poll();
+        }
+        int count = 0;
+        for (Integer i : maxOffset.values()) {
+            count += i;
+        }
+        System.out.println("count" + count);
+        for (PageCacheReadUnitQueue q : PageCacheReadUnitQueueManager.getBucketReadUnitQueue().values()) {
+            if (!q.isEmpty()) {
+                System.out.println(counter.get(q.getBucketName()).get() + "" + q);
+            }
+        }
+
+        return PageCacheReadUnitQueueManager.getBucketReadUnitQueue(queue).poll();
+
 
     }
 
@@ -144,6 +176,7 @@ public class DefaultPullConsumer implements PullConsumer {
         for (String bucket : buckets) {
             PageCacheReadUnitQueueManager.intPageCacheReadUnitQueue(bucket);
         }
+        queueMaxOffset = maxOffset.get(queue);
 
 
     }

@@ -99,7 +99,7 @@ public class ConsumerTester {
                     if (offset != offsets.get(queueOrTopic).get(producer)) {
                         logger.error("Offset not equal expected:{} actual:{} producer:{} queueOrTopic:{}",
                                 offsets.get(queueOrTopic).get(producer), offset, producer, queueOrTopic);
-                        System.out.println(message);
+                        // System.out.println(message);
                         break;
                     } else {
                         offsets.get(queueOrTopic).put(producer, offset + 1);

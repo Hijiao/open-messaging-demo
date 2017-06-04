@@ -34,5 +34,10 @@ public class PageCacheReadUnitQueueManager {
     public static PageCacheReadUnitQueue getBucketReadUnitQueue(String bucket) {
         return bucketsReadQueueMap.get(bucket);
     }
+
+    public static Map<String, PageCacheReadUnitQueue> getBucketReadUnitQueue() {
+        return bucketsReadQueueMap;
+    }
+
 }
 

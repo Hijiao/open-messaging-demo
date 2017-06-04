@@ -4,6 +4,7 @@ import io.openmessaging.MessageHeader;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -66,24 +67,24 @@ public class PageCacheReaderManager extends Thread {
 //
 //            getMessageFromFileAndSentToMap(map);
 //        }
-
-        while (true) {
-            DefaultBytesMessage message = getMessageFromFile();
-            if (message != null) {
-                String bucketName = message.headers().getString(MessageHeader.TOPIC);
-                if (bucketName == null) {
-                    bucketName = message.headers().getString(MessageHeader.QUEUE);
-                }
-                try {
-                    PageCacheReadUnitQueueManager.getBucketReadUnitQueue(bucketName).offer(message);
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    break;
+        try {
+            while (true) {
+                DefaultBytesMessage message = getMessageFromFile();
+                if (message != null) {
+                    //System.out.println("               new message:"+message);
+                    String bucketName = message.headers().getString(MessageHeader.TOPIC);
+                    if (bucketName != null) {
+                        PageCacheReadUnitQueueManager.getBucketReadUnitQueue(bucketName).put(message);
+                    } else {
+                        bucketName = message.headers().getString(MessageHeader.QUEUE);
+                        PageCacheReadUnitQueueManager.getBucketReadUnitQueue(bucketName).put(message);
+                    }
                 }
             }
-        }
+        } catch (Exception e) {
+            e.printStackTrace();
 
+        }
     }
 
     private DefaultBytesMessage getMessageFromFile() {
@@ -136,10 +137,12 @@ public class PageCacheReaderManager extends Thread {
                         body = null;
                         break;
                 }
+                tmpByteBuffer.rewind();
+
             }
         }
         if (hasPackagedOneMessage) {
-            System.out.println(message);
+            // System.out.println(message);
             return message;
         }
 
@@ -222,9 +225,15 @@ public class PageCacheReaderManager extends Thread {
 
         try {
             currPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * (index + 1));
-
         } catch (Exception e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+            try {
+                currPage = randAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index, randAccessFile.length() - Constants.MAPPED_BYTE_BUFF_PAGE_SIZE * index);
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+
+            currPage = null;
         }
 
     }
