@@ -123,12 +123,13 @@ public class DefaultPullConsumer implements PullConsumer {
                 }
                 return PageCacheReadUnitQueueManager.getBucketReadUnitQueue(queue).take();
             }
-
-            int count = 0;
-            for (Integer i : maxOffset.values()) {
-                count += i;
-            }
-            return PageCacheReadUnitQueueManager.getBucketReadUnitQueue(queue).take();
+//
+//            int count = 0;
+//            for (Integer i : maxOffset.values()) {
+//                count += i;
+//            }
+//            System.out.println(count);
+            return PageCacheReadUnitQueueManager.getBucketReadUnitQueue(queue).poll();
         }
         //  System.out.println("count" + count);
 //            for (PageCacheReadUnitQueue q : PageCacheReadUnitQueueManager.getBucketReadUnitQueue().values()) {
