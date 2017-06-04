@@ -16,7 +16,7 @@ public class PageCacheReadUnitQueue {
         this.bucketName = bucketName;
     }
 
-    private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue();
+    private LinkedBlockingQueue<DefaultBytesMessage> queue = new LinkedBlockingQueue(Constants.READER_QUEUE_SIZE);
 
     public String getBucketName() {
         return bucketName;
