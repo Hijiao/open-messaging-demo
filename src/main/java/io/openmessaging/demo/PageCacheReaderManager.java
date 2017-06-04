@@ -76,12 +76,10 @@ public class PageCacheReaderManager extends Thread {
                 if (message != null) {
                     //System.out.println("               new message:"+message);
                     String bucketName = message.headers().getString(MessageHeader.TOPIC);
-                    if (bucketName != null) {
-                        PageCacheReadUnitQueueManager.getBucketReadUnitQueue(bucketName).offer(message);
-                    } else {
+                    if (bucketName == null)
                         bucketName = message.headers().getString(MessageHeader.QUEUE);
-                        PageCacheReadUnitQueueManager.getBucketReadUnitQueue(bucketName).offer(message);
-                    }
+                    PageCacheReadUnitQueueManager.getBucketReadUnitQueue(bucketName).offer(message);
+
                 }
             }
         } catch (Exception e) {

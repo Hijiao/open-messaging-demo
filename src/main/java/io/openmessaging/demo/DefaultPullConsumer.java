@@ -36,10 +36,6 @@ public class DefaultPullConsumer implements PullConsumer {
     int queueMaxOffset = 0;
 
     private static void init(String storePath) {
-        PageCacheReaderManager.getInstance().setStorePath(storePath);
-        PageCacheReaderManager.getInstance().start();
-
-
         try {
 
             File file = new File(storePath + File.separator + "offset.txt");
@@ -59,6 +55,8 @@ public class DefaultPullConsumer implements PullConsumer {
                 maxOffset.put(record.split("=")[0], Integer.parseInt(record.split("=")[1]));
                 counter.put(record.split("=")[0], new AtomicInteger());
             }
+            PageCacheReaderManager.getInstance().setStorePath(storePath);
+            PageCacheReaderManager.getInstance().start();
 
 
         } catch (Exception e) {

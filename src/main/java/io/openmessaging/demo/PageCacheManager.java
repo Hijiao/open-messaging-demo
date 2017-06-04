@@ -51,17 +51,21 @@ public class PageCacheManager extends Thread {
 
     @Override
     public void run() {
-        while (true) {
-            DefaultBytesMessage message = writeQueue.poll();
-            if (message != null) {
-                String bucketName = message.headers().getString(MessageHeader.TOPIC);
-                if (bucketName == null) {
-                    bucketName = message.headers().getString(MessageHeader.QUEUE);
+        try {
+            while (true) {
+                DefaultBytesMessage message = writeQueue.take();
+                if (message != null) {
+                    String bucketName = message.headers().getString(MessageHeader.TOPIC);
+                    if (bucketName == null) {
+                        bucketName = message.headers().getString(MessageHeader.QUEUE);
+                    }
+                    int offset = bucketsOffsetMap.getInt(bucketName);
+                    bucketsOffsetMap.put(bucketName, ++offset);
+                    writeMessage(offset, message);
                 }
-                int offset = bucketsOffsetMap.getInt(bucketName);
-                bucketsOffsetMap.put(bucketName, ++offset);
-                writeMessage(offset, message);
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

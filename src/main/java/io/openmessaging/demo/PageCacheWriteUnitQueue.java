@@ -32,6 +32,18 @@ public class PageCacheWriteUnitQueue {
      * poll()方法和offer()方法是对应的，从中拿一个数据，如果没有直接返回null
      */
 
+    public void put(DefaultBytesMessage message) {
+        try {
+            queue.put(message);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public DefaultBytesMessage take() throws InterruptedException {
+        return queue.take();
+    }
+
     public void offer(DefaultBytesMessage message) {
         queue.offer(message);
     }

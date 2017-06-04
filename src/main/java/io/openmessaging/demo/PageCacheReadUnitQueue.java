@@ -12,6 +12,7 @@ public class PageCacheReadUnitQueue {
     // private DefaultBytesMessage message;
 
     public PageCacheReadUnitQueue(String bucketName) {
+        System.out.println("init PageCacheReadUnitQueue:" + bucketName);
         this.bucketName = bucketName;
     }
 

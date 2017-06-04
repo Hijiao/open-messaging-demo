@@ -15,9 +15,9 @@ public class Constants {
     public static final int BYTE_BUFFER_SIZE = 1024 * 256;
 
 
-    public static final int MAPPED_BYTE_BUFF_PAGE_SIZE = 1024 * 1024 * 1;
+    public static final int MAPPED_BYTE_BUFF_PAGE_SIZE = 1024 * 1024 * 512;
 
-    public static final int WRITE_QUEUE_SIZE = 10000;
+    public static final int WRITE_QUEUE_SIZE = 1000000;
 
 
     //consumer消费时，连续读QUEUE、Topic都为空则判断结束；

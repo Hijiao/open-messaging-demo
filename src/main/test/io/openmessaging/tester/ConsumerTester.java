@@ -101,6 +101,9 @@ public class ConsumerTester {
                         // System.out.println(message);
                         break;
                     } else {
+                        logger.info("Offset  equal expected:{} actual:{} producer:{} queueOrTopic:{} message:{}",
+                                offsets.get(queueOrTopic).get(producer), offset, producer, queueOrTopic, message);
+
                         offsets.get(queueOrTopic).put(producer, offset + 1);
                     }
                     pullNum++;
